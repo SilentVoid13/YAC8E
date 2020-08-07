@@ -1,6 +1,9 @@
 mod chip8;
 mod ram;
 mod cpu;
+mod bus;
+mod keyboard;
+mod display;
 
 use crate::chip8::Chip8;
 

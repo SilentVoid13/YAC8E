@@ -1,14 +1,23 @@
-use crate::ram::Ram;
+use crate::bus::Bus;
+
 use std::error::Error;
 use std::fmt;
 
 pub const PROGRAM_START: u16 = 0x200;
 
+/// Cpu emulation
 pub struct Cpu {
+    /// 16 8-bit registers
     vx: Vec<u8>,
+    /// Program Counter (or Instruction Pointer)
     pc: u16,
+    // TODO: Remove this
     prev_pc: u16,
+    /// 16-bit register used to store memory addresses,
     i: u16,
+    /// Stack Containing 16 16-bit values at maximum
+    /// Only used for return addresses in CHIP-8
+    stack: Vec<u16>,
 }
 
 impl Cpu {
@@ -18,12 +27,13 @@ impl Cpu {
             pc: PROGRAM_START,
             prev_pc: 0,
             i: 0,
+            stack: vec![],
         }
     }
 
-    pub fn run_instruction(&mut self, ram: &mut Ram) -> Result<(), Box<dyn Error>> {
-        let high = ram.read_byte(self.pc as usize)? as u16;
-        let low = ram.read_byte((self.pc + 1) as usize)? as u16;
+    pub fn run_instruction(&mut self, bus: &mut Bus) -> Result<(), Box<dyn Error>> {
+        let high = bus.ram.read_byte(self.pc as usize)? as u16;
+        let low = bus.ram.read_byte((self.pc + 1) as usize)? as u16;
         let instruction: u16 = (high << 8) | low;
         println!("Instruction read : {:#X?}, high: {:#X?}, low: {:#X?}", instruction, high, low);
 
@@ -47,15 +57,16 @@ impl Cpu {
                 // goto NNN
                 self.pc = nnn;
             },
+            0x2 => {
+                // Call subroutine at address NNN
+                // *(0xNNN)()
+                self.stack.push(self.pc);
+                self.pc = nnn;
+            },
             0x3 => {
                 // if(Vx==NN)
                 let vx = self.read_reg_vx(x);
-                if vx == nn {
-                    self.pc += 4;
-                }
-                else {
-                    self.pc += 2;
-                }
+                self.skip_if(vx == nn);
             },
             0x6 => {
                 // Vx = NN
@@ -68,6 +79,42 @@ impl Cpu {
                 self.write_reg_vx(x, vx.wrapping_add(nn));
                 self.pc += 2;
             },
+            0x8 => {
+                match n {
+                    0x0 => {
+                        // Vx=Vy
+                        self.write_reg_vx(x, self.read_reg_vx(y));
+                    },
+                    0x1 => {
+
+                    },
+                    0x2 => {
+
+                    },
+                    0x3 => {
+
+                    },
+                    0x4 => {
+
+                    },
+                    0x5 => {
+
+                    },
+                    0x6 => {
+
+                    },
+                    0x7 => {
+
+                    },
+                    0xE => {
+
+                    },
+                    _ => {
+                        return Err(format!("Unrecognized opcode: {:#X}", instruction).into());
+                    }
+                }
+                self.pc += 2;
+            },
             0xA => {
                 // I = NNN
                 self.i = nnn;
@@ -77,9 +124,26 @@ impl Cpu {
                 // draw(Vx,Vy,N)
                 let vx = self.read_reg_vx(x);
                 let vy = self.read_reg_vx(y);
-                self.draw_sprite(ram, vx, vy, n);
+                bus.display.draw_sprite(vx, vy, n);
                 self.pc += 2;
             },
+            0xE => {
+                match nn {
+                    0x9E => {
+                        // if(key()==Vx)
+                        let vx = self.read_reg_vx(x);
+                        self.skip_if(bus.keyboard.key_pressed == vx);
+                    },
+                    0xA1 => {
+                        // 	if(key()!=Vx)
+                        let vx = self.read_reg_vx(x);
+                        self.skip_if(bus.keyboard.key_pressed != vx);
+                    },
+                    _ => {
+                        return Err(format!("Unrecognized opcode: {:#X}", instruction).into());
+                    },
+                }
+            }
             0xF => {
                 match nn {
                     0x1E => {
@@ -109,14 +173,13 @@ impl Cpu {
         self.vx[index as usize]
     }
 
-    fn draw_sprite(&self, ram: &mut Ram, vx: u8, vy: u8, height: u8) {
-        println!(
-            "[DEBUG] Drawing a sprite at ({}, {}), of width {} and height {}",
-            vx,
-            vy,
-            8,
-            height,
-        );
+    pub fn skip_if(&mut self, cond: bool) {
+        if cond {
+            self.pc += 4;
+        }
+        else {
+            self.pc += 2;
+        }
     }
 }
 
