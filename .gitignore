@@ -1,0 +1,38 @@
+# SilentVoid custom .gitignore
+
+# Usual projects files
+docs/
+RESOURCES.md
+DEPENDENCIES.md
+
+# Files extensions
+*.exe
+*.json
+*.o
+*.sh
+*.drawio
+
+# CLion related files
+.idea
+.name
+misc.xml
+modules.xml
+vcs.xml
+*.iml
+*.cbp
+
+# Cmake / Make related files
+Makefile
+staticlibs
+cmake_tests
+cmake-*
+cmake_install.cmake
+CMakeFiles
+CMakeCache.txt
+
+# Cargo files
+target/
+**/*.rs.bk
+
+# Custom files
+games/*
