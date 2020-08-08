@@ -39,4 +39,6 @@ impl Bus {
             self.delay_timer - ticks as u8
         }
     }
+
+
 }

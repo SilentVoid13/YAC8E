@@ -1,12 +1,12 @@
-use crate::ram::Ram;
 use crate::cpu::{Cpu, PROGRAM_START};
 
 use std::error::Error;
 use crate::bus::Bus;
+use crate::utils::log_debug;
 
 #[derive(Debug)]
 pub struct Chip8 {
-    bus: Bus,
+    pub bus: Bus,
     cpu: Cpu,
 }
 
@@ -24,9 +24,15 @@ impl Chip8 {
         Ok(())
     }
 
-    pub fn run_instruction(&mut self) {
-        self.cpu.run_instruction(&mut self.bus);
+    pub fn run_instruction(&mut self) -> Result<(), Box<dyn Error>> {
+        self.cpu.run_instruction(&mut self.bus)?;
 
-        println!("Cpu state: {:#?}", self.cpu);
+        log_debug(
+            format!(
+                "Cpu state: {:#?}", self.cpu
+            )
+        );
+
+        Ok(())
     }
 }
