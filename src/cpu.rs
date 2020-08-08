@@ -51,7 +51,19 @@ impl Cpu {
 
         match (instruction & 0xF000) >> 12 {
             0x0 => {
-
+                // We don't implement opcode 0x0NNN, only used on older machines
+                match nn {
+                    0xE0 => {
+                        bus.display.clear();
+                        self.pc += 2;
+                    },
+                    0xEE => {
+                        self.pc = self.stack.pop().ok_or("Impossible instruction: 0x00EE, no return address on stack")?;
+                    },
+                    _ => {
+                        return Err(format!("Unrecognized opcode: {:#X}", instruction).into());
+                    },
+                }
             },
             0x1 => {
                 // goto NNN
@@ -80,34 +92,66 @@ impl Cpu {
                 self.pc += 2;
             },
             0x8 => {
+                let vx = self.read_reg_vx(x);
+                let vy = self.read_reg_vx(y);
                 match n {
                     0x0 => {
                         // Vx=Vy
-                        self.write_reg_vx(x, self.read_reg_vx(y));
+                        self.write_reg_vx(x, vy);
                     },
                     0x1 => {
-
+                        // Vx=Vx|Vy
+                        self.write_reg_vx(x, vx | vy);
                     },
                     0x2 => {
-
+                        // Vx=Vx&Vy
+                        self.write_reg_vx(x, vx & vy);
                     },
                     0x3 => {
-
+                        // 	Vx=Vx^Vy
+                        self.write_reg_vx(x, vx ^ vy);
                     },
                     0x4 => {
-
+                        // Vx += Vy
+                        let sum = vx as u16 + vy as u16;
+                        self.write_reg_vx(x, sum as u8);
+                        if sum > 0xFF {
+                            println!("[WARNING] Overflow detected on instruction: {}", instruction);
+                            self.write_reg_vx(0xF, 1);
+                        }
+                        else {
+                            self.write_reg_vx(0xF, 0);
+                        }
                     },
                     0x5 => {
-
+                        // Vx -= Vy
+                        if vx > vy {
+                            self.write_reg_vx(0xF, 1);
+                        }
+                        else {
+                            self.write_reg_vx(0xF, 0);
+                        }
+                        self.write_reg_vx(x, self.read_reg_vx(x) - self.read_reg_vx(y));
                     },
                     0x6 => {
-
+                        // Vx>>=1
+                        self.write_reg_vx(0xF, vx & 0x1);
+                        self.write_reg_vx(x, self.read_reg_vx(x) >> 1);
                     },
                     0x7 => {
-
+                        // Vx=Vy-Vx
+                        if vy > vx {
+                            self.write_reg_vx(0xF, 1);
+                        }
+                        else {
+                            self.write_reg_vx(0xF, 0);
+                        }
+                        self.write_reg_vx(x, self.read_reg_vx(y) - self.read_reg_vx(x));
                     },
                     0xE => {
-
+                        // Vx<<=1
+                        self.write_reg_vx(0xF, vx >> 7);
+                        self.write_reg_vx(x, self.read_reg_vx(x) << 1);
                     },
                     _ => {
                         return Err(format!("Unrecognized opcode: {:#X}", instruction).into());
@@ -132,12 +176,12 @@ impl Cpu {
                     0x9E => {
                         // if(key()==Vx)
                         let vx = self.read_reg_vx(x);
-                        self.skip_if(bus.keyboard.key_pressed == vx);
+                        self.skip_if(bus.keyboard.is_key_pressed(vx));
                     },
                     0xA1 => {
                         // 	if(key()!=Vx)
                         let vx = self.read_reg_vx(x);
-                        self.skip_if(bus.keyboard.key_pressed != vx);
+                        self.skip_if(!bus.keyboard.is_key_pressed(vx));
                     },
                     _ => {
                         return Err(format!("Unrecognized opcode: {:#X}", instruction).into());
@@ -146,15 +190,58 @@ impl Cpu {
             }
             0xF => {
                 match nn {
+                    0x7 => {
+                        self.write_reg_vx(x, bus.get_delay_timer());
+                        self.pc += 2;
+                    },
+                    0x0A => {
+
+                    },
+                    0x15 => {
+                        bus.set_delay_timer(self.read_reg_vx(x));
+                        self.pc += 2;
+                    },
+                    0x18 => {
+
+                    },
                     0x1E => {
                         // I += Vx
                         let vx = self.read_reg_vx(x);
                         self.i += vx as u16;
                         self.pc += 2;
-                    }
+                    },
+                    0x29 => {
+
+                    },
+                    0x33 => {
+
+                    },
+                    0x55 => {
+
+                    },
+                    0x65 => {
+                        println!("Before: {:?}", self.vx);
+                        for index in 0..x + 1 {
+                            let value = bus.ram.read_byte((self.i + index as u16) as usize)?;
+                            self.write_reg_vx(index, value);
+                        }
+                        self.pc += 2;
+                        println!("After: {:?}", self.vx);
+
+                        //let index = (x+1) as usize;
+                        //let bytes = bus.ram.read_bytes(self.i as usize, index)?;
+                        //println!("Before: {:?}", self.vx);
+                        //self.vx
+                        //    .get_mut(0..index).ok_or("OOB index")?
+                        //    .copy_from_slice(
+                        //        bus.ram.read_bytes(self.i as usize, index)?
+                        //    );
+                        //println!("After: {:?}", self.vx);
+                        //self.pc += 2;
+                    },
                     _ => {
                         return Err(format!("Unrecognized opcode: {:#X}", instruction).into());
-                    }
+                    },
                 }
             }
             _ => {

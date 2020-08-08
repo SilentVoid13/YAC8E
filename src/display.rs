@@ -1,13 +1,16 @@
 
+const WIDTH: usize = 64;
+const HEIGHT: usize = 32;
+
 #[derive(Debug)]
 pub struct Display {
-    screen:
+    screen: Vec<Vec<u8>>,
 }
 
 impl Display {
     pub fn new() -> Self {
         Display {
-
+            screen: vec![vec![0; WIDTH]; HEIGHT],
         }
     }
 
@@ -22,6 +25,14 @@ impl Display {
 
         for y in 0..height {
             //let byte = bus.ram_read_byte
+        }
+    }
+
+    pub fn clear(&mut self) {
+        for y in 0..HEIGHT {
+            for x in 0..WIDTH {
+                self.screen[y][x] = 0;
+            }
         }
     }
 }

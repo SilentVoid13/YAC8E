@@ -59,4 +59,9 @@ impl Ram {
         let v = self.memory.get(address).ok_or("OOB index")?;
         Ok(*v)
     }
+
+    pub fn read_bytes(&self, address: usize, size: usize) -> Result<&[u8], Box<dyn Error>>{
+        let v = self.memory.get(address..address+size).ok_or("OOB index")?;
+        Ok(v)
+    }
 }
