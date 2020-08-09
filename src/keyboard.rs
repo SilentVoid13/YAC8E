@@ -11,12 +11,15 @@ impl Keyboard {
         }
     }
 
-    pub fn is_key_pressed(&self, key_code: u8) -> bool {
+    pub fn is_key_pressed(&self, _key_code: u8) -> bool {
+        /*
         if let Some(k) = self.key_pressed.as_ref() {
             k == &key_code
         }
         else {
             false
         }
+         */
+        false
     }
 }

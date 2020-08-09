@@ -1,5 +1,5 @@
 use crate::bus::Bus;
-use crate::utils::{log_debug, log_warning, log_special};
+use crate::utils::{log_debug, log_warning};
 
 use std::error::Error;
 use std::fmt;
@@ -34,15 +34,18 @@ impl Cpu {
         }
     }
 
-    pub fn run_instruction(&mut self, bus: &mut Bus) -> Result<(), Box<dyn Error>> {
+    pub fn run_instruction(&mut self, bus: &mut Bus, debug: bool) -> Result<(), Box<dyn Error>> {
         let high = bus.ram.read_byte(self.pc as usize)? as u16;
         let low = bus.ram.read_byte((self.pc + 1) as usize)? as u16;
         let instruction: u16 = (high << 8) | low;
-        log_debug(
-            format!(
-                "Instruction read : {:#X?}, high: {:#X?}, low: {:#X?}", instruction, high, low
-            )
-        );
+
+        if debug {
+            log_debug(
+                format!(
+                    "Instruction : {:#X?}, high: {:#X?}, low: {:#X?}", instruction, high, low
+                )
+            );
+        }
 
         let nnn = instruction & 0x0FFF;
         let nn = (instruction & 0x00FF) as u8;
@@ -50,11 +53,13 @@ impl Cpu {
         let x = ((instruction & 0x0F00) >> 8) as u8;
         let y = ((instruction & 0x00F0) >> 4) as u8;
 
-        log_debug(
-            format!(
-                "nnn: {:X?}, nn: {:X?}, n: {:X?}, x: {:X?}, y: {:X?}", nnn, nn, n, x, y
-            )
-        );
+        if debug {
+            log_debug(
+                format!(
+                    "nnn: {:X?}, nn: {:X?}, n: {:X?}, x: {:X?}, y: {:X?}", nnn, nn, n, x, y
+                )
+            );
+        }
 
         if self.prev_pc == self.pc {
             panic!("Please increment PC");
@@ -66,14 +71,13 @@ impl Cpu {
                 // We don't implement opcode 0x0NNN, only used on older machines
                 match nn {
                     0xE0 => {
+                        // disp_clear()
                         bus.display.clear();
                         self.pc += 2;
                     },
                     0xEE => {
-                        //self.pc = self.stack.pop().ok_or("Impossible instruction: 0x00EE, no return address on stack")?;
-                        //return from subroutine
-                        let addr = self.stack.pop().unwrap();
-                        self.pc = addr;
+                        // return;
+                        self.pc = self.stack.pop().ok_or("Impossible instruction: 0x00EE, no return address on stack")?;
                     },
                     _ => {
                         return Err(format!("Unrecognized opcode: {:#X}", instruction).into());
@@ -91,17 +95,17 @@ impl Cpu {
                 self.pc = nnn;
             },
             0x3 => {
-                // if(Vx==NN)
+                // if (Vx == NN)
                 let vx = self.read_reg_vx(x);
                 self.skip_if(vx == nn);
             },
             0x4 => {
-                // 	if(Vx!=NN)
+                // if (Vx != NN)
                 let vx = self.read_reg_vx(x);
                 self.skip_if(vx != nn);
             },
             0x5 => {
-                // if(Vx==Vy)
+                // if (Vx == Vy)
                 let vx = self.read_reg_vx(x);
                 let vy = self.read_reg_vx(y);
                 self.skip_if(vx == vy)
@@ -122,20 +126,23 @@ impl Cpu {
                 let vy = self.read_reg_vx(y);
                 match n {
                     0x0 => {
-                        // Vx=Vy
+                        // Vx = Vy
                         self.write_reg_vx(x, vy);
                     },
                     0x1 => {
-                        panic!();
-                        // Vx=Vx|Vy
+                        // Vx = Vx | Vy
+
+                        // TODO
+                        panic!("TODO");
+
                         //self.write_reg_vx(x, vx | vy);
                     },
                     0x2 => {
-                        // Vx=Vx&Vy
+                        // Vx = Vx & Vy
                         self.write_reg_vx(x, vx & vy);
                     },
                     0x3 => {
-                        // 	Vx=Vx^Vy
+                        // 	Vx = Vx ^ Vy
                         self.write_reg_vx(x, vx ^ vy);
                     },
                     0x4 => {
@@ -143,11 +150,14 @@ impl Cpu {
                         let sum = vx as u16 + vy as u16;
                         self.write_reg_vx(x, (sum % 256) as u8);
                         if sum > 0xFF {
-                            log_warning(
-                                format!(
-                                    "Overflow detected on instruction: {:X}", instruction
-                                )
-                            );
+                            if debug {
+                                log_warning(
+                                    format!(
+                                        "Overflow detected on instruction: {:X}", instruction
+                                    )
+                                );
+                            }
+
                             self.write_reg_vx(0xF, 1);
                         }
                         else {
@@ -165,12 +175,12 @@ impl Cpu {
                         self.write_reg_vx(x, vx - vy);
                     },
                     0x6 => {
-                        // Vx>>=1
+                        // Vx >>= 1
                         self.write_reg_vx(0xF, vx & 0x1);
                         self.write_reg_vx(x, vx >> 1);
                     },
                     0x7 => {
-                        // Vx=Vy-Vx
+                        // Vx = Vy - Vx
                         if vy > vx {
                             self.write_reg_vx(0xF, 1);
                         }
@@ -180,7 +190,7 @@ impl Cpu {
                         self.write_reg_vx(x, vy - vx);
                     },
                     0xE => {
-                        // Vx<<=1
+                        // Vx <<= 1
                         self.write_reg_vx(0xF, vx >> 7);
                         self.write_reg_vx(x, vx << 1);
                     },
@@ -191,6 +201,7 @@ impl Cpu {
                 self.pc += 2;
             },
             0x9 => {
+                // if (Vx != Vy)
                 let vx = self.read_reg_vx(x);
                 let vy = self.read_reg_vx(y);
                 self.skip_if(vx != vy);
@@ -201,10 +212,11 @@ impl Cpu {
                 self.pc += 2;
             },
             0xB => {
-                // PC=V0+NNN
+                // PC = V0 + NNN
                 self.pc = self.read_reg_vx(0) as u16 + nnn;
             },
             0xC => {
+                // Vx = rand() & NN
                 let mut rng = rand::thread_rng();
                 let num: u8 = rng.gen_range(0, 255);
                 self.write_reg_vx(x, num & n);
@@ -214,18 +226,18 @@ impl Cpu {
                 // draw(Vx,Vy,N)
                 let vx = self.read_reg_vx(x);
                 let vy = self.read_reg_vx(y);
-                self.draw_sprite(bus, vx, vy, n)?;
+                self.draw_sprite(bus, debug, vx, vy, n)?;
                 self.pc += 2;
             },
             0xE => {
                 match nn {
                     0x9E => {
-                        // if(key()==Vx)
+                        // if (key() == Vx)
                         let key = self.read_reg_vx(x);
                         self.skip_if(bus.keyboard.is_key_pressed(key));
                     },
                     0xA1 => {
-                        // 	if(key()!=Vx)
+                        // 	if (key() != Vx)
                         let key = self.read_reg_vx(x);
                         self.skip_if(!bus.keyboard.is_key_pressed(key));
                     },
@@ -254,6 +266,8 @@ impl Cpu {
                         // sound_timer(Vx)
 
                         // TODO
+                        println!("TODO");
+
                         self.pc += 2;
                     },
                     0x1E => {
@@ -263,14 +277,14 @@ impl Cpu {
                         self.pc += 2;
                     },
                     0x29 => {
-                        // I=sprite_addr[Vx]
+                        // I = sprite_addr[Vx]
                         self.i = self.read_reg_vx(x) as u16 * 5;
                         self.pc += 2;
                     },
                     0x33 => {
-                        // *(I+0)=BCD(3);
-                        // *(I+1)=BCD(2);
-                        // *(I+2)=BCD(1);
+                        // *(I+0) = BCD(3);
+                        // *(I+1) = BCD(2);
+                        // *(I+2) = BCD(1);
                         let vx = self.read_reg_vx(x);
                         bus.ram.write_byte(self.i as usize, vx / 100);
                         bus.ram.write_byte((self.i + 1) as usize, (vx % 100) / 10);
@@ -279,27 +293,27 @@ impl Cpu {
                     },
                     0x55 => {
                         // reg_dump(Vx,&I)
+
+                        // TODO
+                        self.pc += 2;
+
+                        panic!("TODO");
                     },
                     0x65 => {
                         // reg_load(Vx,&I)
+                        // https://stackoverflow.com/questions/51179156/increment-i-in-chip-8-opcode-fx65
+                        // Here, we use the old method from the 70s
+                        // I += x+1
 
-                        for index in 0..x + 1 {
-                            let value = bus.ram.read_byte((self.i + index as u16) as usize)?;
-                            self.write_reg_vx(index, value);
-                        }
+                        let index = (x+1) as usize;
+                        self.vx
+                            .get_mut(0..index).ok_or("OOB index")?
+                            .copy_from_slice(
+                                bus.ram.read_bytes(self.i as usize, index)?
+                            );
                         self.i += x as u16 + 1;
-                        self.pc += 2;
 
-                        //let index = (x+1) as usize;
-                        //let bytes = bus.ram.read_bytes(self.i as usize, index)?;
-                        //println!("Before: {:?}", self.vx);
-                        //self.vx
-                        //    .get_mut(0..index).ok_or("OOB index")?
-                        //    .copy_from_slice(
-                        //        bus.ram.read_bytes(self.i as usize, index)?
-                        //    );
-                        //println!("After: {:?}", self.vx);
-                        //self.pc += 2;
+                        self.pc += 2;
                     },
                     _ => {
                         return Err(format!("Unrecognized opcode: {:#X}", instruction).into());
@@ -334,21 +348,23 @@ impl Cpu {
     /// Draws a sprite to the screen
     /// CHIP-8 sprites are always eight pixels wide and between one to fifteen pixels high
     /// One byte corresponds to one row of a given sprite
-    pub fn draw_sprite(&mut self, bus: &mut Bus, x: u8, y: u8, n: u8) -> Result<(), Box<dyn Error>> {
-        log_special(
-            format!(
-                "Drawing a sprite at ({}, {}), of width {} and height {}",
-                x,
-                y,
-                8,
-                n,
-            )
-        );
+    pub fn draw_sprite(&mut self, bus: &mut Bus, debug: bool, x: u8, y: u8, n: u8) -> Result<(), Box<dyn Error>> {
+        if debug {
+            log_debug(
+                format!(
+                    "Drawing a sprite at ({}, {}), of width {} and height {}",
+                    x,
+                    y,
+                    8,
+                    n,
+                )
+            );
+        }
 
         let mut should_set_vf = false;
         for sprite_y in 0..n {
-            let byte = bus.ram.read_byte((self.i as u8 + sprite_y) as usize)?;
-            if bus.display.draw_byte(byte, x, y + sprite_y)? {
+            let byte = bus.ram.read_byte((self.i + sprite_y as u16) as usize)?;
+            if bus.display.draw_byte(x, y + sprite_y, byte)? {
                 should_set_vf = true;
             }
         }

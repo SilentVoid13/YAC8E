@@ -32,7 +32,7 @@ impl Display {
             let prev_value = self.screen[index];
 
             let bit = byte >> 7;
-            self.screen[index] ^= (bit as u32);
+            self.screen[index] ^= bit as u32;
 
             if prev_value == 1 && self.screen[index] == 0 {
                 erased = true;
