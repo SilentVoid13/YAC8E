@@ -1,7 +1,7 @@
 use crate::ram::Ram;
 use crate::keyboard::Keyboard;
 use crate::display::Display;
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 use crate::utils::log_debug;
 
 #[derive(Debug)]

@@ -50,20 +50,22 @@ impl Chip8 {
         let window_width = chip8.config.window_width;
         let window_height = chip8.config.window_height;
         let mut window = Window::new(
-            "Yet Another Chip-8 Emulator",
+            "Yet Another CHIP-8 Emulator",
             window_width,
             window_height,
             WindowOptions::default(),
         )?;
 
-        //let mut last_instruction_run_time = Instant::now();
-        //let mut last_display_time = Instant::now();
+        // 500 Hz is considered a good value for CHIP-8 emulators.
+        // This mean roughly that 1 clock cycle ~= 2ms
+        // (This may vary depending on the instruction, e.g: drawing a sprite costs more than a simple XOR operation)
+        let hz = 500.0;
 
         // Sets the refresh rate
         // minifb will check how much time has passed since the last time
         // and if it's less than the selected time it will sleep for the remainder of it.
         // minifb defaults to 4ms if not specified (quite slow)
-        window.limit_update_rate(Some(Duration::from_secs_f32(1.0/500.0)));
+        window.limit_update_rate(Some(Duration::from_secs_f32(1.0/hz)));
 
         let mut accumulator = Duration::new(0, 0);
         let mut last_time = Instant::now();
@@ -74,7 +76,7 @@ impl Chip8 {
         while window.is_open() && !window.is_key_down(Key::Escape) {
             let current_time = Instant::now();
             let mut delta = current_time - last_time;
-            // "Cap" the delta value in case the program gets stuck (e.g: waiting for a keystroke) so we don't have to simulate this
+            // "Cap" the delta value in case the program gets stuck (e.g: waiting for a keystroke) so we don't have to simulate this long wait
             if delta > delta_cap {
                 delta = delta_cap.clone();
             }
@@ -86,9 +88,11 @@ impl Chip8 {
                 accumulator -= frequency;
             }
 
+            // We update the keys state (released / pressed)
+            chip8.bus.keyboard.update_keys_state(&window);
+
             // Here we execute one instruction, then we update the window display
             // I don't know if it's better to separate these 2 steps into 2 separate timelines
-            // e.g: Execute instruction every 2ms and try to refresh every 10 ms
             chip8.run_instruction()?;
             window.update_with_buffer(&chip8.bus.display.color_screen(), WIDTH, HEIGHT)?;
         }
@@ -108,11 +112,11 @@ impl Chip8 {
         self.cpu.run_instruction(&mut self.bus, self.config.debug)?;
 
         if self.config.debug {
-            //log_debug(
-            //    format!(
-            //        "Cpu state: {:#?}", self.cpu
-            //    )
-            //);
+            log_debug(
+                format!(
+                    "Cpu state: {:#?}", self.cpu
+                )
+            );
             log_debug(
                 format!(
                     "Bus delay_timer: {:?}", self.bus.delay_timer

@@ -2,7 +2,6 @@ use crate::bus::Bus;
 use crate::utils::{log_debug, log_warning};
 
 use std::error::Error;
-use std::fmt;
 
 use rand::Rng;
 
@@ -46,7 +45,7 @@ impl Cpu {
         if debug {
             log_debug(
                 format!(
-                    "Instruction : {:#X?}, high: {:#X?}, low: {:#X?}", instruction, high, low
+                    "Instruction: {:#X?}, high: {:#X?}, low: {:#X?}", instruction, high, low
                 )
             );
         }
@@ -237,19 +236,13 @@ impl Cpu {
                 match nn {
                     0x9E => {
                         // if (key() == Vx)
-
-                        // TODO
-
                         let key = self.read_reg_vx(x);
-                        self.skip_if(bus.keyboard.is_key_pressed(key));
+                        self.skip_if(*bus.keyboard.is_key_pressed(key)?);
                     },
                     0xA1 => {
                         // 	if (key() != Vx)
-
-                        // TODO
-
                         let key = self.read_reg_vx(x);
-                        self.skip_if(!bus.keyboard.is_key_pressed(key));
+                        self.skip_if(!(*bus.keyboard.is_key_pressed(key)?));
                     },
                     _ => {
                         return Err(format!("Unrecognized opcode: {:#X}", instruction).into());
