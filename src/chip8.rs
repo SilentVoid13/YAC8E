@@ -5,7 +5,7 @@ use crate::utils::log_debug;
 
 use std::error::Error;
 use std::fs::File;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use minifb::{Window, WindowOptions, Key};
 use std::io::Read;
@@ -62,14 +62,29 @@ impl Chip8 {
         // Sets the refresh rate
         // minifb will check how much time has passed since the last time
         // and if it's less than the selected time it will sleep for the remainder of it.
-        window.limit_update_rate(Some(Duration::from_micros(1000)));
+        // minifb defaults to 4ms if not specified (quite slow)
+        window.limit_update_rate(Some(Duration::from_secs_f32(1.0/500.0)));
+
+        let mut accumulator = Duration::new(0, 0);
+        let mut last_time = Instant::now();
+        let delta_cap = Duration::from_millis(3000);
+
+        let frequency = Duration::from_secs_f32(1.0 / 60.0);
 
         while window.is_open() && !window.is_key_down(Key::Escape) {
-            // We execute an instruction every 2 ms
-            //if Instant::now() - last_instruction_run_time > Duration::from_millis(2) {
-            //chip8.run_instruction()?;
-            //last_instruction_run_time = Instant::now();
-            //}
+            let current_time = Instant::now();
+            let mut delta = current_time - last_time;
+            // "Cap" the delta value in case the program gets stuck (e.g: waiting for a keystroke) so we don't have to simulate this
+            if delta > delta_cap {
+                delta = delta_cap.clone();
+            }
+            last_time = current_time;
+            accumulator += delta;
+
+            while accumulator >= frequency {
+                chip8.bus.update_timers(chip8.config.debug);
+                accumulator -= frequency;
+            }
 
             // Here we execute one instruction, then we update the window display
             // I don't know if it's better to separate these 2 steps into 2 separate timelines
@@ -90,15 +105,17 @@ impl Chip8 {
 
     /// Executes the instruction pointed by the PC
     pub fn run_instruction(&mut self) -> Result<(), Box<dyn Error>> {
-        //print!(".");
-        //io::stdout().flush();
-
         self.cpu.run_instruction(&mut self.bus, self.config.debug)?;
 
         if self.config.debug {
+            //log_debug(
+            //    format!(
+            //        "Cpu state: {:#?}", self.cpu
+            //    )
+            //);
             log_debug(
                 format!(
-                    "Cpu state: {:#?}", self.cpu
+                    "Bus delay_timer: {:?}", self.bus.delay_timer
                 )
             );
         }

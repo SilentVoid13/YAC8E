@@ -8,6 +8,7 @@ use rand::Rng;
 
 pub const PROGRAM_START: u16 = 0x200;
 
+#[derive(Debug)]
 /// The CPU component
 pub struct Cpu {
     /// Vector containing the 16 8-bit registers, referred as V0 to VF
@@ -236,11 +237,17 @@ impl Cpu {
                 match nn {
                     0x9E => {
                         // if (key() == Vx)
+
+                        // TODO
+
                         let key = self.read_reg_vx(x);
                         self.skip_if(bus.keyboard.is_key_pressed(key));
                     },
                     0xA1 => {
                         // 	if (key() != Vx)
+
+                        // TODO
+
                         let key = self.read_reg_vx(x);
                         self.skip_if(!bus.keyboard.is_key_pressed(key));
                     },
@@ -253,20 +260,25 @@ impl Cpu {
                 match nn {
                     0x7 => {
                         // Vx = get_delay()
-                        self.write_reg_vx(x, bus.get_delay_timer());
+                        self.write_reg_vx(x, bus.delay_timer);
                         self.pc += 2;
                     },
                     0x0A => {
                         // Vx = get_key()
+
+                        // TODO
+                        // println!("TODO");
+
                         self.pc += 2;
                     },
                     0x15 => {
                         // delay_timer(Vx)
-                        bus.set_delay_timer(self.read_reg_vx(x));
+                        bus.delay_timer = self.read_reg_vx(x);
                         self.pc += 2;
                     },
                     0x18 => {
                         // sound_timer(Vx)
+                        bus.sound_timer = self.read_reg_vx(x);
 
                         // TODO
                         println!("TODO");
@@ -385,15 +397,5 @@ impl Cpu {
         }
 
         Ok(())
-    }
-}
-
-impl fmt::Debug for Cpu {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Cpu {{\n")?;
-        write!(f, "\tvx = {:X?}\n", self.vx)?;
-        write!(f, "\tpc = {:X?}\n", self.pc)?;
-        write!(f, "\ti = {:X?}\n", self.i)?;
-        write!(f, "}}")
     }
 }

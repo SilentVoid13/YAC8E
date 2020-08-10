@@ -1,7 +1,8 @@
 use crate::ram::Ram;
 use crate::keyboard::Keyboard;
 use crate::display::Display;
-use std::time::Instant;
+use std::time::{Duration, Instant};
+use crate::utils::log_debug;
 
 #[derive(Debug)]
 /// Bus struct interacting with system components
@@ -12,10 +13,12 @@ pub struct Bus {
     pub keyboard: Keyboard,
     /// Display component
     pub display: Display,
-    /// Current delay timer
-    delay_timer: u8,
-    // TODO: Doc of this
-    delay_timer_set_time: Instant,
+    /// Delay timer
+    pub delay_timer: u8,
+    /// Sound timer
+    pub sound_timer: u8,
+    debug_time: Instant,
+    debug_count: u64,
 }
 
 impl Bus {
@@ -26,26 +29,35 @@ impl Bus {
             keyboard: Keyboard::new(),
             display: Display::new(),
             delay_timer: 0,
-            delay_timer_set_time: Instant::now(),
+            sound_timer: 0,
+            debug_time: Instant::now(),
+            debug_count: 0,
         }
     }
 
-    /// Sets a new delay timer
-    pub fn set_delay_timer(&mut self, value: u8) {
-        self.delay_timer_set_time = Instant::now();
-        self.delay_timer = value;
-    }
-
-    /// Get the current delay timer
-    pub fn get_delay_timer(&self) -> u8 {
-        let diff = Instant::now() - self.delay_timer_set_time;
-        let ms = diff.as_millis();
-        let ticks = ms / 16;
-        if ticks >= self.delay_timer as u128 {
-            0
+    /// Updates the timers (decrease by one)
+    pub fn update_timers(&mut self, debug: bool) {
+        if debug {
+            self.debug_count += 1;
+            // update_timers has been called 60 times
+            if self.debug_count == 60 {
+                // This should be 1 second
+                let time_taken = Instant::now() - self.debug_time;
+                self.debug_time = Instant::now();
+                self.debug_count = 0;
+                log_debug(
+                    format!(
+                        "Time taken for 60 update_timers: {:?}", time_taken
+                    )
+                );
+            }
         }
-        else {
-            self.delay_timer - ticks as u8
+
+        if self.delay_timer > 0 {
+            self.delay_timer -= 1;
+        }
+        if self.sound_timer > 0 {
+            self.sound_timer -= 1;
         }
     }
 }
