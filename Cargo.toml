@@ -8,5 +8,6 @@ edition = "2018"
 
 [dependencies]
 clap = "2.33.2"
-minifb = "0.17"
 rand = "0.7.3"
+minifb = "0.17"
+sdl2 = "0.34.2"

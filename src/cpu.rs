@@ -1,9 +1,11 @@
-use crate::bus::Bus;
 use crate::utils::{log_debug, log_warning};
 
 use std::error::Error;
 
 use rand::Rng;
+use std::time::Instant;
+use crate::ram::Ram;
+use crate::handler::Handler;
 
 pub const PROGRAM_START: u16 = 0x200;
 
@@ -19,6 +21,12 @@ pub struct Cpu {
     /// Vector emulation the stack containing 16 16-bit values at maximum
     /// Only used for return addresses in CHIP-8
     stack: Vec<u16>,
+    /// Delay timer
+    pub delay_timer: u8,
+    /// Sound timer
+    sound_timer: u8,
+    debug_time: Instant,
+    debug_count: u64,
 }
 
 impl Cpu {
@@ -29,14 +37,18 @@ impl Cpu {
             pc: PROGRAM_START,
             i: 0,
             stack: vec![],
+            delay_timer: 0,
+            sound_timer: 0,
+            debug_time: Instant::now(),
+            debug_count: 0,
         }
     }
 
     /// Runs a single instruction at `pc` address
-    pub fn run_instruction(&mut self, bus: &mut Bus, debug: bool) -> Result<(), Box<dyn Error>> {
+    pub fn run_instruction(&mut self, handler: &mut Handler, ram: &mut Ram, debug: bool) -> Result<(), Box<dyn Error>> {
         // Big-endian
-        let high = bus.ram.read_byte(self.pc as usize)? as u16;
-        let low = bus.ram.read_byte((self.pc + 1) as usize)? as u16;
+        let high = ram.read_byte(self.pc as usize)? as u16;
+        let low = ram.read_byte((self.pc + 1) as usize)? as u16;
         let instruction: u16 = (high << 8) | low;
 
         if debug {
@@ -67,7 +79,7 @@ impl Cpu {
                 match nn {
                     0xE0 => {
                         // disp_clear()
-                        bus.display.clear();
+                        handler.display.clear();
                         self.pc += 2;
                     },
                     0xEE => {
@@ -217,7 +229,7 @@ impl Cpu {
                 // draw(Vx,Vy,N)
                 let vx = self.read_reg_vx(x);
                 let vy = self.read_reg_vx(y);
-                self.draw_sprite(bus, debug, vx, vy, n)?;
+                self.draw_sprite(handler, ram, debug, vx, vy, n)?;
                 self.pc += 2;
             },
             0xE => {
@@ -225,12 +237,12 @@ impl Cpu {
                     0x9E => {
                         // if (key() == Vx)
                         let key = self.read_reg_vx(x);
-                        self.skip_if(*bus.keyboard.is_key_pressed(key)?);
+                        self.skip_if(*handler.keypad.is_key_pressed(key)?);
                     },
                     0xA1 => {
                         // 	if (key() != Vx)
                         let key = self.read_reg_vx(x);
-                        self.skip_if(!(*bus.keyboard.is_key_pressed(key)?));
+                        self.skip_if(!(*handler.keypad.is_key_pressed(key)?));
                     },
                     _ => {
                         return Err(format!("Unrecognized opcode: {:#X}", instruction).into());
@@ -241,26 +253,27 @@ impl Cpu {
                 match nn {
                     0x7 => {
                         // Vx = get_delay()
-                        self.write_reg_vx(x, bus.delay_timer);
+                        self.write_reg_vx(x, self.delay_timer);
                         self.pc += 2;
                     },
                     0x0A => {
                         // Vx = get_key()
-                        if let Some(key) = bus.keyboard.first_pressed_key() {
+                        if let Some(key) = handler.keypad.first_pressed_key() {
                             self.write_reg_vx(x, key);
                             self.pc += 2;
                         }
                     },
                     0x15 => {
                         // delay_timer(Vx)
-                        bus.delay_timer = self.read_reg_vx(x);
+                        self.delay_timer = self.read_reg_vx(x);
                         self.pc += 2;
                     },
                     0x18 => {
                         // sound_timer(Vx)
-                        bus.sound_timer = self.read_reg_vx(x);
-
                         // TODO
+
+                        self.sound_timer = self.read_reg_vx(x);
+
                         if debug {
                             log_warning("Sound can't be implemented with minifb, instruction 0xFX18 skipped");
                         }
@@ -283,9 +296,9 @@ impl Cpu {
                         // *(I+1) = BCD(2);
                         // *(I+2) = BCD(1);
                         let vx = self.read_reg_vx(x);
-                        bus.ram.write_byte(self.i as usize, vx / 100);
-                        bus.ram.write_byte((self.i + 1) as usize, (vx % 100) / 10);
-                        bus.ram.write_byte((self.i + 2) as usize, vx % 10);
+                        ram.write_byte(self.i as usize, vx / 100);
+                        ram.write_byte((self.i + 1) as usize, (vx % 100) / 10);
+                        ram.write_byte((self.i + 2) as usize, vx % 10);
                         self.pc += 2;
                     },
                     0x55 => {
@@ -295,7 +308,7 @@ impl Cpu {
                         // I += x+1
 
                         let index = (x+1) as usize;
-                        bus.ram.write_bytes(
+                        ram.write_bytes(
                             self.i as usize, self.vx.get(0..index).ok_or("OOB index")?
                         )?;
                         self.i += x as u16 + 1;
@@ -314,7 +327,7 @@ impl Cpu {
                         self.vx
                             .get_mut(0..index).ok_or("OOB index")?
                             .copy_from_slice(
-                                bus.ram.read_bytes(self.i as usize, index)?
+                                ram.read_bytes(self.i as usize, index)?
                             );
                         self.i += x as u16 + 1;
 
@@ -355,7 +368,7 @@ impl Cpu {
     /// Draws a sprite to the screen
     /// CHIP-8 sprites are always eight pixels wide and between one to fifteen pixels high
     /// One byte corresponds to one row of a given sprite
-    pub fn draw_sprite(&mut self, bus: &mut Bus, debug: bool, x: u8, y: u8, n: u8) -> Result<(), Box<dyn Error>> {
+    pub fn draw_sprite(&mut self, handler: &mut Handler, ram: &mut Ram, debug: bool, x: u8, y: u8, n: u8) -> Result<(), Box<dyn Error>> {
         if debug {
             log_debug(
                 format!(
@@ -370,8 +383,8 @@ impl Cpu {
 
         let mut should_set_vf = false;
         for sprite_y in 0..n {
-            let byte = bus.ram.read_byte((self.i + sprite_y as u16) as usize)?;
-            if bus.display.draw_byte(x, y + sprite_y, byte)? {
+            let byte = ram.read_byte((self.i + sprite_y as u16) as usize)?;
+            if handler.display.draw_byte(x, y + sprite_y, byte)? {
                 should_set_vf = true;
             }
         }
@@ -384,5 +397,31 @@ impl Cpu {
         }
 
         Ok(())
+    }
+
+    /// Updates the timers (decrease by one)
+    pub fn update_timers(&mut self, debug: bool) {
+        if debug {
+            self.debug_count += 1;
+            // update_timers has been called 60 times
+            if self.debug_count == 60 {
+                // This should be 1 second
+                let time_taken = Instant::now() - self.debug_time;
+                self.debug_time = Instant::now();
+                self.debug_count = 0;
+                log_debug(
+                    format!(
+                        "Time taken for 60 update_timers: {:?}", time_taken
+                    )
+                );
+            }
+        }
+
+        if self.delay_timer > 0 {
+            self.delay_timer -= 1;
+        }
+        if self.sound_timer > 0 {
+            self.sound_timer -= 1;
+        }
     }
 }

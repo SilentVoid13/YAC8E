@@ -1,10 +1,10 @@
 mod chip8;
-mod ram;
 mod cpu;
-mod bus;
-mod keyboard;
-mod display;
+mod ram;
+
 mod utils;
+
+mod handler;
 
 use crate::chip8::{Chip8, Chip8Config};
 
@@ -13,6 +13,7 @@ use std::error::Error;
 use clap::{App, Arg};
 use std::path::Path;
 use std::process;
+use crate::handler::HandlerType;
 
 fn main() -> Result<(), Box<dyn Error>>{
     let version = "0.1";
@@ -35,6 +36,13 @@ fn main() -> Result<(), Box<dyn Error>>{
                     .short("d")
                     .long("debug")
                     .help("Sets debugging output (default: false)")
+            )
+            .arg(
+                Arg::with_name("library")
+                    .short("l")
+                    .long("library")
+                    .value_name("LIBRARY")
+                    .help("Sets the handling library to use (default: minifb)")
             )
             .arg(
                 Arg::with_name("hertz")
@@ -76,6 +84,20 @@ fn main() -> Result<(), Box<dyn Error>>{
     let debug = match matches.occurrences_of("debug") {
         0 => false,
         _ => true,
+    };
+
+    let handler_type = match matches.value_of("display") {
+        Some(d) => {
+            match d {
+                "minifb" => HandlerType::MINIFB,
+                "sdl" => HandlerType::SDL,
+                _ => {
+                    eprintln!("\n[-] Invalid Display library value\n");
+                    process::exit(1);
+                }
+            }
+        },
+        None => HandlerType::MINIFB,
     };
 
     let hertz: f64 = match matches.value_of("hertz") {
@@ -132,6 +154,7 @@ fn main() -> Result<(), Box<dyn Error>>{
     let chip8_config = Chip8Config {
         rom: rom,
         debug: debug,
+        handler_type: handler_type,
         hertz: hertz,
         window_width: width,
         window_height: height,

@@ -1,13 +1,19 @@
 use std::error::Error;
+use std::fmt::Debug;
 
 pub const WIDTH: usize = 64;
 pub const HEIGHT: usize = 32;
 
-#[derive(Debug)]
 /// The display component, handling the 64x32 pixels screen
 pub struct Display {
     /// Vector containing all of the pixels of the screen
     pub screen: Vec<u32>,
+}
+
+pub trait DisplayTrait: Debug {
+    fn update(&mut self) -> Result<(), Box<dyn Error>>;
+    fn clear(&mut self);
+    fn draw_byte(&mut self, x: u8, y: u8, byte: u8) -> Result<bool, Box<dyn Error>>;
 }
 
 impl Display {
