@@ -34,7 +34,14 @@ fn main() -> Result<(), Box<dyn Error>>{
                 Arg::with_name("debug")
                     .short("d")
                     .long("debug")
-                    .help("Sets debugging output")
+                    .help("Sets debugging output (default: false)")
+            )
+            .arg(
+                Arg::with_name("hertz")
+                    .short("H")
+                    .long("hertz")
+                    .value_name("HERTZ")
+                    .help("Sets the Hertz value for the clock cycles (default: 500 Hz)")
             )
             .arg(
                 Arg::with_name("width")
@@ -69,6 +76,25 @@ fn main() -> Result<(), Box<dyn Error>>{
     let debug = match matches.occurrences_of("debug") {
         0 => false,
         _ => true,
+    };
+
+    let hertz: f64 = match matches.value_of("hertz") {
+        Some(t) => {
+            match t.parse().unwrap_or_else(|_| {
+                eprintln!("\n[-] Invalid Hertz value\n");
+                process::exit(1);
+            }) {
+                x if x > 0.0 && x < 100000.0 => x,
+                _ => {
+                    eprintln!("\n[-] Invalid Hertz value\n");
+                    process::exit(1);
+                }
+            }
+        },
+        // 500 Hz is considered a good value for CHIP-8 emulators.
+        // This mean roughly that 1 clock cycle ~= 2ms
+        // (This may vary depending on the instruction, e.g: drawing a sprite costs more than a simple XOR operation)
+        None => 500.0,
     };
 
     let width: usize = match matches.value_of("width") {
@@ -106,6 +132,7 @@ fn main() -> Result<(), Box<dyn Error>>{
     let chip8_config = Chip8Config {
         rom: rom,
         debug: debug,
+        hertz: hertz,
         window_width: width,
         window_height: height,
     };

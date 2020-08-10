@@ -14,8 +14,6 @@ pub struct Cpu {
     vx: Vec<u8>,
     /// Program Counter (or Instruction Pointer)
     pc: u16,
-    // TODO: Remove this
-    prev_pc: u16,
     /// The 16-bit register used to store memory addresses,
     i: u16,
     /// Vector emulation the stack containing 16 16-bit values at maximum
@@ -29,7 +27,6 @@ impl Cpu {
         Cpu {
             vx: vec![0; 16],
             pc: PROGRAM_START,
-            prev_pc: 0,
             i: 0,
             stack: vec![],
         }
@@ -63,11 +60,6 @@ impl Cpu {
                 )
             );
         }
-
-        if self.prev_pc == self.pc {
-            panic!("Please increment PC");
-        }
-        self.prev_pc = self.pc;
 
         match (instruction & 0xF000) >> 12 {
             0x0 => {
@@ -134,11 +126,7 @@ impl Cpu {
                     },
                     0x1 => {
                         // Vx = Vx | Vy
-
-                        // TODO
-                        panic!("TODO");
-
-                        //self.write_reg_vx(x, vx | vy);
+                        self.write_reg_vx(x, vx | vy);
                     },
                     0x2 => {
                         // Vx = Vx & Vy
@@ -258,11 +246,10 @@ impl Cpu {
                     },
                     0x0A => {
                         // Vx = get_key()
-
-                        // TODO
-                        // println!("TODO");
-
-                        self.pc += 2;
+                        if let Some(key) = bus.keyboard.first_pressed_key() {
+                            self.write_reg_vx(x, key);
+                            self.pc += 2;
+                        }
                     },
                     0x15 => {
                         // delay_timer(Vx)
@@ -274,7 +261,9 @@ impl Cpu {
                         bus.sound_timer = self.read_reg_vx(x);
 
                         // TODO
-                        println!("TODO");
+                        if debug {
+                            log_warning("Sound can't be implemented with minifb, instruction 0xFX18 skipped");
+                        }
 
                         self.pc += 2;
                     },
@@ -305,10 +294,15 @@ impl Cpu {
                         // Here, we use the old method from the 70s
                         // I += x+1
 
+                        let index = (x+1) as usize;
+                        bus.ram.write_bytes(
+                            self.i as usize, self.vx.get(0..index).ok_or("OOB index")?
+                        )?;
+                        self.i += x as u16 + 1;
+
                         // TODO
                         self.pc += 2;
 
-                        panic!("TODO");
                     },
                     0x65 => {
                         // reg_load(Vx,&I)

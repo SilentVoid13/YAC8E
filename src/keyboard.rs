@@ -23,6 +23,15 @@ impl Keyboard {
         self.keys_state.get(key_code as usize).ok_or("Invalid key code".into())
     }
 
+    pub fn first_pressed_key(&self) -> Option<u8> {
+        for (i, k) in self.keys_state.iter().enumerate() {
+            if *k == true {
+                return Some(i as u8);
+            }
+        }
+        None
+    }
+
     /// Converts a minifb keycode to a CHIP-8 keycode
     fn convert_keycode(key: Key) -> u8 {
         match key {

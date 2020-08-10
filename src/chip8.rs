@@ -23,6 +23,7 @@ pub struct Chip8 {
 pub struct Chip8Config {
     pub rom: String,
     pub debug: bool,
+    pub hertz: f64,
     pub window_width: usize,
     pub window_height: usize,
 }
@@ -56,22 +57,17 @@ impl Chip8 {
             WindowOptions::default(),
         )?;
 
-        // 500 Hz is considered a good value for CHIP-8 emulators.
-        // This mean roughly that 1 clock cycle ~= 2ms
-        // (This may vary depending on the instruction, e.g: drawing a sprite costs more than a simple XOR operation)
-        let hz = 500.0;
-
         // Sets the refresh rate
         // minifb will check how much time has passed since the last time
         // and if it's less than the selected time it will sleep for the remainder of it.
         // minifb defaults to 4ms if not specified (quite slow)
-        window.limit_update_rate(Some(Duration::from_secs_f32(1.0/hz)));
+        window.limit_update_rate(Some(Duration::from_secs_f64(1.0 / chip8.config.hertz)));
 
         let mut accumulator = Duration::new(0, 0);
         let mut last_time = Instant::now();
         let delta_cap = Duration::from_millis(3000);
 
-        let frequency = Duration::from_secs_f32(1.0 / 60.0);
+        let frequency = Duration::from_secs_f64(1.0 / 60.0);
 
         while window.is_open() && !window.is_key_down(Key::Escape) {
             let current_time = Instant::now();
