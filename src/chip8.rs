@@ -11,6 +11,7 @@ use minifb::{Window, WindowOptions, Key};
 use std::io::Read;
 
 #[derive(Debug)]
+/// The main struct containing all the components for the CHIP-8 VM
 pub struct Chip8 {
     config: Chip8Config,
     pub bus: Bus,
@@ -18,6 +19,7 @@ pub struct Chip8 {
 }
 
 #[derive(Debug)]
+/// A config struct containing various informations like the ROM path or if debug should be enabled
 pub struct Chip8Config {
     pub rom: String,
     pub debug: bool,
@@ -26,6 +28,7 @@ pub struct Chip8Config {
 }
 
 impl Chip8 {
+    /// Creates a new `Chip8` object given a `config`
     pub fn new(config: Chip8Config) -> Self {
         Chip8 {
             config: config,
@@ -34,6 +37,7 @@ impl Chip8 {
         }
     }
 
+    /// Runs a ROM given a `chip8_config` parameter
     pub fn run_rom(chip8_config: Chip8Config) -> Result<(), Box<dyn Error>> {
         let mut chip8 = Chip8::new(chip8_config);
 
@@ -56,8 +60,9 @@ impl Chip8 {
         //let mut last_display_time = Instant::now();
 
         // Sets the refresh rate
-        // minifb will check how much time has passed since the last time and if it's less than the selected time it will sleep for the remainder of it.
-        window.limit_update_rate(Some(Duration::from_micros(800)));
+        // minifb will check how much time has passed since the last time
+        // and if it's less than the selected time it will sleep for the remainder of it.
+        window.limit_update_rate(Some(Duration::from_micros(1000)));
 
         while window.is_open() && !window.is_key_down(Key::Escape) {
             // We execute an instruction every 2 ms
@@ -76,12 +81,14 @@ impl Chip8 {
         Ok(())
     }
 
+    /// Loads the ROM data into RAM
     pub fn load_rom(&mut self, data: &Vec<u8>) -> Result<(), Box<dyn Error>> {
         self.bus.ram.write_bytes(PROGRAM_START as usize, &data[..])?;
 
         Ok(())
     }
 
+    /// Executes the instruction pointed by the PC
     pub fn run_instruction(&mut self) -> Result<(), Box<dyn Error>> {
         //print!(".");
         //io::stdout().flush();

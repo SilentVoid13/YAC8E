@@ -1,21 +1,25 @@
 use std::error::Error;
 
 #[derive(Debug)]
+/// CHIP-8 RAM emulation struct
 pub struct Ram {
+    /// Memory vector
     memory: Vec<u8>,
 }
 
 impl Ram {
+    /// Creates a new `Ram` object
     pub fn new() -> Self {
         let mut ram = Ram {
             memory: vec![0u8; 4096],
         };
+        // We load the builtins sprites
         Ram::load_sprites(&mut ram.memory);
 
         ram
     }
 
-    /// Loads the buit-ins font utilities to allow for simple output of common characters in memory
+    /// Loads the builtins font utilities to allow for simple output of common characters in memory
     /// To use these sprites, the opcode FX29 must be used
     fn load_sprites(memory: &mut [u8]) {
         let sprites: [u8; 80] = [
@@ -39,12 +43,14 @@ impl Ram {
         memory[0..sprites.len()].copy_from_slice(&sprites);
     }
 
+    /// Writes a single byte into memory at `address` with value `value`
     pub fn write_byte(&mut self, address: usize, value: u8) {
         // TODO: Secure this
         self.memory[address] = value;
     }
 
     #[allow(dead_code)]
+    /// Writes multiple bytes into memory at `address` with value `buf`
     pub fn write_bytes(&mut self, address: usize, buf: &[u8]) -> Result<(), Box<dyn Error>> {
         self.memory
             .get_mut(
@@ -56,6 +62,7 @@ impl Ram {
         Ok(())
     }
 
+    /// Reads a single byte at `address`
     pub fn read_byte(&self, address: usize) -> Result<u8, Box<dyn Error>>{
         //let v = self.memory.get(address).ok_or("OOB index")?;
         //Ok(*v)
@@ -65,6 +72,7 @@ impl Ram {
     }
 
     #[allow(dead_code)]
+    /// Reads `size` bytes at `address`
     pub fn read_bytes(&self, address: usize, size: usize) -> Result<&[u8], Box<dyn Error>>{
         let v = self.memory.get(address..address+size).ok_or("OOB index")?;
         Ok(v)

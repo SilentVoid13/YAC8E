@@ -8,22 +8,23 @@ use rand::Rng;
 
 pub const PROGRAM_START: u16 = 0x200;
 
-/// Cpu emulation
+/// The CPU component
 pub struct Cpu {
-    /// 16 8-bit registers
+    /// Vector containing the 16 8-bit registers, referred as V0 to VF
     vx: Vec<u8>,
     /// Program Counter (or Instruction Pointer)
     pc: u16,
     // TODO: Remove this
     prev_pc: u16,
-    /// 16-bit register used to store memory addresses,
+    /// The 16-bit register used to store memory addresses,
     i: u16,
-    /// Stack Containing 16 16-bit values at maximum
+    /// Vector emulation the stack containing 16 16-bit values at maximum
     /// Only used for return addresses in CHIP-8
     stack: Vec<u16>,
 }
 
 impl Cpu {
+    /// Creates a new `Cpu` object
     pub fn new() -> Self {
         Cpu {
             vx: vec![0; 16],
@@ -34,7 +35,9 @@ impl Cpu {
         }
     }
 
+    /// Runs a single instruction at `pc` address
     pub fn run_instruction(&mut self, bus: &mut Bus, debug: bool) -> Result<(), Box<dyn Error>> {
+        // Big-endian
         let high = bus.ram.read_byte(self.pc as usize)? as u16;
         let low = bus.ram.read_byte((self.pc + 1) as usize)? as u16;
         let instruction: u16 = (high << 8) | low;
@@ -68,7 +71,7 @@ impl Cpu {
 
         match (instruction & 0xF000) >> 12 {
             0x0 => {
-                // We don't implement opcode 0x0NNN, only used on older machines
+                // We don't implement opcode 0x0NNN, only used on older machines and deprecated
                 match nn {
                     0xE0 => {
                         // disp_clear()
@@ -293,6 +296,9 @@ impl Cpu {
                     },
                     0x55 => {
                         // reg_dump(Vx,&I)
+                        // https://stackoverflow.com/questions/51179156/increment-i-in-chip-8-opcode-fx65
+                        // Here, we use the old method from the 70s
+                        // I += x+1
 
                         // TODO
                         self.pc += 2;
@@ -328,10 +334,12 @@ impl Cpu {
         Ok(())
     }
 
+    /// Writes in register at index `index` the value `value`
     pub fn write_reg_vx(&mut self, index: u8, value: u8) {
         self.vx[index as usize] = value;
     }
 
+    /// Reads one byte from register at index `index`
     pub fn read_reg_vx(&self, index: u8) -> u8 {
         self.vx[index as usize]
     }
