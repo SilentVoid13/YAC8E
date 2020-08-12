@@ -51,26 +51,30 @@ impl Chip8 {
         chip8.load_rom(&data)?;
 
         let mut accumulator = Duration::new(0, 0);
-        let mut last_time = Instant::now();
+        let mut prev_time = Instant::now();
         let delta_cap = Duration::from_millis(3000);
 
-        let frequency = Duration::from_secs_f64(1.0 / 60.0);
+        let timer_frequency = Duration::from_secs_f64(1.0 / 60.0);
 
         // TODO
         //while window.is_open() && !window.is_key_down(Key::Escape) {
         loop {
+            if chip8.handler.keypad.must_quit() {
+                break;
+            }
+
             let current_time = Instant::now();
-            let mut delta = current_time - last_time;
+            let mut delta = current_time - prev_time;
             // "Cap" the delta value in case the program gets stuck (e.g: waiting for a keystroke) so we don't have to simulate this long wait
             if delta > delta_cap {
                 delta = delta_cap.clone();
             }
-            last_time = current_time;
+            prev_time = current_time;
             accumulator += delta;
 
-            while accumulator >= frequency {
+            while accumulator >= timer_frequency {
                 chip8.cpu.update_timers(chip8.config.debug);
-                accumulator -= frequency;
+                accumulator -= timer_frequency;
             }
 
             // We update the keys state (released / pressed)
@@ -80,7 +84,7 @@ impl Chip8 {
             // I don't know if it's better to separate these 2 steps into 2 separate timelines
             chip8.run_instruction()?;
             // Updates the screen and sleeps if necessary
-            chip8.handler.display.update();
+            chip8.handler.display.update()?;
         }
 
         Ok(())

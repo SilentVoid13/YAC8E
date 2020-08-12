@@ -1,11 +1,10 @@
-use crate::ram::Ram;
-use crate::handler::display::{Display, DisplayTrait};
-use crate::utils::log_debug;
 use crate::chip8::Chip8Config;
+use crate::handler::display::{DisplayTrait};
 use crate::handler::keypad::KeypadTrait;
 use crate::handler::minifb::{MiniFbKeypad, MiniFbDisplay};
+use crate::handler::sdl::{SdlKeypad, SdlDisplay};
 
-use std::time::{Instant, Duration};
+use std::time::{Duration};
 use minifb::{WindowOptions, Window};
 use std::error::Error;
 use std::rc::Rc;
@@ -42,21 +41,23 @@ impl Handler {
                 // minifb defaults to 4ms if not specified (quite slow)
                 window.limit_update_rate(Some(Duration::from_secs_f64(1.0 / chip8_config.hertz)));
 
-                let window = RefCell::new(window);
+                // We share a mutable reference to the window.
+                // This is safe because the application is single-threaded and we only use the mutable aspect of the window in MiniFbDisplay
+                let window = Rc::new(RefCell::new(window));
 
                 Ok(Handler {
-                    keypad: Box::new(MiniFbKeypad::new(RefCell::clone(&window))),
-                    display: Box::new(MiniFbDisplay::new(RefCell::clone(&window))),
+                    keypad: Box::new(MiniFbKeypad::new(Rc::clone(&window))),
+                    display: Box::new(MiniFbDisplay::new(Rc::clone(&window))),
                 })
             },
             HandlerType::SDL => {
-                /*
-                Handler {
-                    keypad: Box::new(sdl::KeyPad::new(&chip8_config)),
-                    display: Box::new(sdl::Display::new(&chip8_config)),
-                }
-                 */
-                Err("SDL not implemented".into())
+                let sdl = sdl2::init()?;
+                let display_rate = Duration::from_secs_f64(1.0 / chip8_config.hertz);
+
+                Ok(Handler {
+                    keypad: Box::new(SdlKeypad::new(&sdl)?),
+                    display: Box::new(SdlDisplay::new(&sdl, display_rate)?),
+                })
             },
         }
     }

@@ -1,25 +1,24 @@
-use crate::handler::KEYBOARD_SIZE;
-
-use std::iter::Iterator;
-use std::error::Error;
-
-use minifb::{Window, Key, KeyRepeat};
+use crate::handler::{KEYBOARD_SIZE, keypad};
 use crate::handler::keypad::KeypadTrait;
+
+use std::error::Error;
 use std::rc::Rc;
 use std::cell::RefCell;
+
+use minifb::{Window, Key, KeyRepeat};
 
 #[derive(Debug)]
 /// The keyboard component, handling the keystrokes
 pub struct MiniFbKeypad {
-    pub handler: RefCell<Window>,
+    pub window: Rc<RefCell<Window>>,
     pub keys_state: [bool; KEYBOARD_SIZE],
 }
 
 impl MiniFbKeypad {
     /// Creates a new `Keypad` object
-    pub fn new(handler: RefCell<Window>) -> Self {
+    pub fn new(window: Rc<RefCell<Window>>) -> Self {
         MiniFbKeypad {
-            handler: handler,
+            window,
             keys_state: [false; KEYBOARD_SIZE],
         }
     }
@@ -46,7 +45,8 @@ impl MiniFbKeypad {
             Key::X => 0x0,
             Key::C => 0xB,
             Key::V => 0xF,
-            _ => 0,
+
+            _ => 0xFF,
         }
     }
 }
@@ -54,34 +54,36 @@ impl MiniFbKeypad {
 impl KeypadTrait for MiniFbKeypad {
     /// Returns `true` if `key_code` corresponds to `key_pressed`, `false` otherwise
     fn is_key_pressed(&self, key_code: u8) -> Result<&bool, Box<dyn Error>> {
-        self.keys_state.get(key_code as usize).ok_or("Invalid key code".into())
+        keypad::is_key_pressed(&self.keys_state, key_code)
     }
 
     fn first_pressed_key(&self) -> Option<u8> {
-        for (i, k) in self.keys_state.iter().enumerate() {
-            if *k == true {
-                return Some(i as u8);
-            }
-        }
-        None
+        keypad::first_pressed_key(&self.keys_state)
     }
 
     fn update_keys_state(&mut self) {
-        self.handler.borrow().get_keys_pressed(KeyRepeat::No).map(|keys| {
+        // Otherwise the closure grabs the whole self variable == double ownership on window
+        let keys_state = &mut self.keys_state;
+        self.window.borrow().get_keys_pressed(KeyRepeat::No).map(|keys| {
             for t in keys {
                 let k = MiniFbKeypad::convert_keycode(t);
-                if k != 0 {
-                    self.keys_state[k as usize] = true;
+                if k != 0xFF {
+                    keys_state[k as usize] = true;
                 }
             }
         });
-        self.handler.borrow().get_keys_released().map(|keys| {
+        self.window.borrow().get_keys_released().map(|keys| {
             for t in keys {
                 let k = MiniFbKeypad::convert_keycode(t);
                 if k != 0 {
-                    self.keys_state[k as usize] = false;
+                    keys_state[k as usize] = false;
                 }
             }
         });
+    }
+
+    /// Checks whether the display / user is sending an exit msg
+    fn must_quit(&mut self) -> bool {
+        !self.window.borrow().is_open() || self.window.borrow().is_key_down(Key::Escape)
     }
 }

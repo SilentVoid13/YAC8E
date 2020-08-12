@@ -86,7 +86,7 @@ fn main() -> Result<(), Box<dyn Error>>{
         _ => true,
     };
 
-    let handler_type = match matches.value_of("display") {
+    let handler_type = match matches.value_of("library") {
         Some(d) => {
             match d {
                 "minifb" => HandlerType::MINIFB,
@@ -159,6 +159,8 @@ fn main() -> Result<(), Box<dyn Error>>{
         window_width: width,
         window_height: height,
     };
+
+    println!("chip8_config: {:#?}", chip8_config);
 
     if let Err(e) = Chip8::run_rom(chip8_config) {
         eprintln!("[-] An error occured: {}", e);
