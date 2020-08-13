@@ -4,10 +4,9 @@ use std::fmt::Debug;
 pub const KEYBOARD_SIZE: usize = 16;
 
 pub trait KeypadTrait: Debug {
-    fn update_keys_state(&mut self);
+    fn update_keys_state(&mut self) -> bool;
     fn is_key_pressed(&self, key_code: u8) -> Result<&bool, Box<dyn Error>>;
     fn first_pressed_key(&self) -> Option<u8>;
-    fn must_quit(&mut self) -> bool;
 }
 
 /// Returns `true` if `key_code` corresponds to `key_pressed`, `false` otherwise

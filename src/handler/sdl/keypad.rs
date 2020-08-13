@@ -51,14 +51,20 @@ impl SdlKeypad {
 }
 
 impl KeypadTrait for SdlKeypad {
-    fn update_keys_state(&mut self) {
+    fn update_keys_state(&mut self) -> bool {
         let events: Vec<Event> = self.event_pump.poll_iter().collect();
-
+        println!("events: {:?}", events);
         for event in events {
             match event {
+                Event::Quit {..} => {
+                    return true;
+                },
                 Event::KeyDown { keycode, .. } => {
                     match keycode {
                         Some(k) => {
+                            if let Keycode::Escape = k {
+                                return false;
+                            }
                             let k = Self::convert_keycode(k);
                             if k != 0xFF {
                                 self.keys_state[k as usize] = true;
@@ -81,6 +87,8 @@ impl KeypadTrait for SdlKeypad {
                 _ => {}
             }
         }
+
+        true
     }
 
     fn is_key_pressed(&self, key_code: u8) -> Result<&bool, Box<dyn Error>> {
@@ -89,28 +97,6 @@ impl KeypadTrait for SdlKeypad {
 
     fn first_pressed_key(&self) -> Option<u8> {
         keypad::first_pressed_key(&self.keys_state)
-    }
-
-    fn must_quit(&mut self) -> bool {
-        let events: Vec<Event> = self.event_pump.poll_iter().collect();
-
-        for event in events {
-            match event {
-                Event::Quit {..} => {
-                    return true;
-                },
-                Event::KeyDown { keycode, .. } => {
-                    match keycode {
-                        Some(Keycode::Escape) => {
-                            return true;
-                        },
-                        _ => {},
-                    }
-                },
-                _ => {},
-            }
-        }
-        false
     }
 }
 

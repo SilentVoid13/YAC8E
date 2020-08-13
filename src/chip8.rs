@@ -63,10 +63,6 @@ impl Chip8 {
         let timer_frequency = Duration::from_secs_f64(1.0 / 60.0);
 
         loop {
-            if chip8.handler.keypad.must_quit() {
-                break;
-            }
-
             let current_time = Instant::now();
             let mut delta = current_time - prev_time;
             // "Cap" the delta value in case the program gets stuck (e.g: waiting for a keystroke) so we don't have to simulate this long wait
@@ -81,8 +77,10 @@ impl Chip8 {
                 accumulator -= timer_frequency;
             }
 
-            // We update the keys state (released / pressed)
-            chip8.handler.keypad.update_keys_state();
+            // We update the keys state (released / pressed), returns false if we receive an exit signal
+            if !chip8.handler.keypad.update_keys_state() {
+                break;
+            }
 
             // Here we execute one instruction, then we update the window display, then we sleep if required (happens in the display.update)
             // I don't know if it's better to separate these 2 steps into 2 separate timelines

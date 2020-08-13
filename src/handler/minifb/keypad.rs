@@ -61,7 +61,11 @@ impl KeypadTrait for MiniFbKeypad {
         keypad::first_pressed_key(&self.keys_state)
     }
 
-    fn update_keys_state(&mut self) {
+    fn update_keys_state(&mut self) -> bool {
+        if !self.window.borrow().is_open() || self.window.borrow().is_key_down(Key::Escape) {
+            return false;
+        }
+
         // Otherwise the closure grabs the whole self variable == double ownership on window
         let keys_state = &mut self.keys_state;
         self.window.borrow().get_keys_pressed(KeyRepeat::No).map(|keys| {
@@ -80,10 +84,7 @@ impl KeypadTrait for MiniFbKeypad {
                 }
             }
         });
-    }
 
-    /// Checks whether the display / user is sending an exit msg
-    fn must_quit(&mut self) -> bool {
-        !self.window.borrow().is_open() || self.window.borrow().is_key_down(Key::Escape)
+        true
     }
 }
