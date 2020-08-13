@@ -9,4 +9,8 @@ edition = "2018"
 clap = "2.33.2"
 rand = "0.7.3"
 minifb = "0.17"
-sdl2 = "0.34.2"
+
+[dependencies.sdl2]
+version = "0.34.2"
+default-features = false
+features = ["gfx"]

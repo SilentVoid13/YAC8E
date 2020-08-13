@@ -39,6 +39,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
+name = "c_vec"
+version = "1.0.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa9e1d9f7d49e289f36f19effbf3d5a5e30163ecf9c7a3c9be94d5374dec5b9a"
+
+[[package]]
 name = "cast"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -426,6 +432,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29fb006600d16da4f1f1e5c7b398f44af2f1b476ff5f2e555651bd78cf4c18d8"
 dependencies = [
  "bitflags 1.2.1",
+ "c_vec",
  "lazy_static 1.4.0",
  "libc",
  "sdl2-sys 0.34.2",

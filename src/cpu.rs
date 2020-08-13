@@ -6,6 +6,7 @@ use rand::Rng;
 use std::time::Instant;
 use crate::ram::Ram;
 use crate::handler::Handler;
+use crate::screen::Screen;
 
 pub const PROGRAM_START: u16 = 0x200;
 
@@ -22,7 +23,7 @@ pub struct Cpu {
     /// Only used for return addresses in CHIP-8
     stack: Vec<u16>,
     /// Delay timer
-    pub delay_timer: u8,
+    delay_timer: u8,
     /// Sound timer
     sound_timer: u8,
     debug_time: Instant,
@@ -45,7 +46,7 @@ impl Cpu {
     }
 
     /// Runs a single instruction at `pc` address
-    pub fn run_instruction(&mut self, handler: &mut Handler, ram: &mut Ram, debug: bool) -> Result<(), Box<dyn Error>> {
+    pub fn run_instruction(&mut self, handler: &mut Handler, ram: &mut Ram, screen: &mut Screen, debug: bool) -> Result<(), Box<dyn Error>> {
         // Big-endian
         let high = ram.read_byte(self.pc as usize)? as u16;
         let low = ram.read_byte((self.pc + 1) as usize)? as u16;
@@ -79,7 +80,7 @@ impl Cpu {
                 match nn {
                     0xE0 => {
                         // disp_clear()
-                        handler.display.clear();
+                        screen.clear();
                         self.pc += 2;
                     },
                     0xEE => {
@@ -229,7 +230,7 @@ impl Cpu {
                 // draw(Vx,Vy,N)
                 let vx = self.read_reg_vx(x);
                 let vy = self.read_reg_vx(y);
-                self.draw_sprite(handler, ram, debug, vx, vy, n)?;
+                self.draw_sprite(ram, screen, debug, vx, vy, n)?;
                 self.pc += 2;
             },
             0xE => {
@@ -368,7 +369,7 @@ impl Cpu {
     /// Draws a sprite to the screen
     /// CHIP-8 sprites are always eight pixels wide and between one to fifteen pixels high
     /// One byte corresponds to one row of a given sprite
-    pub fn draw_sprite(&mut self, handler: &mut Handler, ram: &mut Ram, debug: bool, x: u8, y: u8, n: u8) -> Result<(), Box<dyn Error>> {
+    pub fn draw_sprite(&mut self, ram: &mut Ram, screen: &mut Screen, debug: bool, x: u8, y: u8, n: u8) -> Result<(), Box<dyn Error>> {
         if debug {
             log_debug(
                 format!(
@@ -384,7 +385,7 @@ impl Cpu {
         let mut should_set_vf = false;
         for sprite_y in 0..n {
             let byte = ram.read_byte((self.i + sprite_y as u16) as usize)?;
-            if handler.display.draw_byte(x, y + sprite_y, byte)? {
+            if screen.draw_byte(x, y + sprite_y, byte)? {
                 should_set_vf = true;
             }
         }

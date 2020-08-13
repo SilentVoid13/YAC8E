@@ -94,7 +94,6 @@ impl KeypadTrait for SdlKeypad {
     fn must_quit(&mut self) -> bool {
         let events: Vec<Event> = self.event_pump.poll_iter().collect();
 
-        println!("events: {:?}", events);
         for event in events {
             match event {
                 Event::Quit {..} => {

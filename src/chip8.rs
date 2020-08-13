@@ -1,7 +1,8 @@
 use crate::cpu::{Cpu, PROGRAM_START};
 use crate::ram::Ram;
-use crate::utils::log_debug;
+use crate::screen::Screen;
 use crate::handler::{Handler, HandlerType};
+use crate::utils::log_debug;
 
 use std::error::Error;
 use std::fs::File;
@@ -12,10 +13,14 @@ use std::io::Read;
 /// The main struct containing all the components for the CHIP-8 VM
 pub struct Chip8 {
     config: Chip8Config,
+    /// Handler used to handle the keypad and the screen
     handler: Handler,
+    /// CPU of the VM
     cpu: Cpu,
     /// RAM of the VM
     ram: Ram,
+    /// Vector containing all of the pixels of the screen
+    screen: Screen,
 }
 
 #[derive(Clone, Debug)]
@@ -37,6 +42,7 @@ impl Chip8 {
             handler: Handler::new(config)?,
             cpu: Cpu::new(),
             ram: Ram::new(),
+            screen: Screen::new(),
         })
     }
 
@@ -56,8 +62,6 @@ impl Chip8 {
 
         let timer_frequency = Duration::from_secs_f64(1.0 / 60.0);
 
-        // TODO
-        //while window.is_open() && !window.is_key_down(Key::Escape) {
         loop {
             if chip8.handler.keypad.must_quit() {
                 break;
@@ -80,11 +84,12 @@ impl Chip8 {
             // We update the keys state (released / pressed)
             chip8.handler.keypad.update_keys_state();
 
-            // Here we execute one instruction, then we update the window display
+            // Here we execute one instruction, then we update the window display, then we sleep if required (happens in the display.update)
             // I don't know if it's better to separate these 2 steps into 2 separate timelines
             chip8.run_instruction()?;
+            //chip8.screen.terminal_display();
             // Updates the screen and sleeps if necessary
-            chip8.handler.display.update()?;
+            chip8.handler.display.update(&chip8.screen.pixels)?;
         }
 
         Ok(())
@@ -99,17 +104,12 @@ impl Chip8 {
 
     /// Executes the instruction pointed by the PC
     pub fn run_instruction(&mut self) -> Result<(), Box<dyn Error>> {
-        self.cpu.run_instruction(&mut self.handler, &mut self.ram, self.config.debug)?;
+        self.cpu.run_instruction(&mut self.handler, &mut self.ram, &mut self.screen, self.config.debug)?;
 
         if self.config.debug {
             log_debug(
                 format!(
                     "Cpu state: {:#?}", self.cpu
-                )
-            );
-            log_debug(
-                format!(
-                    "Bus delay_timer: {:?}", self.cpu.delay_timer
                 )
             );
         }

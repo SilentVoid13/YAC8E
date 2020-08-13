@@ -1,5 +1,4 @@
 use crate::handler::display::DisplayTrait;
-use crate::handler::{WIDTH, HEIGHT, display};
 
 use std::error::Error;
 use std::time::{Instant, Duration};
@@ -7,10 +6,10 @@ use std::thread;
 
 use core::fmt;
 
-use sdl2::{Sdl, pixels};
+use sdl2::{Sdl};
 use sdl2::render::Canvas;
 use sdl2::video::Window;
-use sdl2::rect::{Point, Rect};
+use sdl2::rect::{Rect};
 use sdl2::pixels::Color;
 
 const SCALE_FACTOR: u32 = 10;
@@ -18,8 +17,6 @@ const SCALE_FACTOR: u32 = 10;
 pub struct SdlDisplay {
     display_rate: Duration,
     prev_time: Instant,
-    /// Vector containing all of the pixels of the screen
-    pub screen: Vec<u8>,
     canvas: Canvas<Window>,
 }
 
@@ -43,7 +40,6 @@ impl SdlDisplay {
         Ok(SdlDisplay {
             display_rate: display_frequency,
             prev_time: Instant::now(),
-            screen: vec![0; WIDTH * HEIGHT],
             canvas: canvas,
         })
     }
@@ -56,62 +52,47 @@ impl SdlDisplay {
         }
         self.prev_time = Instant::now();
     }
+
+    fn clear(&mut self) {
+        self.canvas.clear();
+    }
 }
 
 impl DisplayTrait for SdlDisplay {
-    fn update(&mut self) -> Result<(), Box<dyn Error>> {
+    fn update(&mut self, pixels: &Vec<Vec<u8>>) -> Result<(), Box<dyn Error>> {
         self.update_rate();
+        self.draw(pixels)?;
         self.canvas.present();
         Ok(())
     }
 
-    fn clear(&mut self) {
-        self.canvas.set_draw_color(Color::RGB(0, 0, 0));
-        self.canvas.clear();
-    }
-
-    fn draw_byte(&mut self, mut x: u8, mut y: u8, mut byte: u8) -> Result<bool, Box<dyn Error>> {
+    fn draw(&mut self, pixels: &Vec<Vec<u8>>) -> Result<(), Box<dyn Error>> {
         self.clear();
-        self.canvas.set_draw_color(Color::RGB(255, 255, 255));
 
-        let mut erased = false;
-
-        x %= WIDTH as u8;
-        y %= HEIGHT as u8;
-
-
-        for mut coord_x in x..x+8 {
-            coord_x %= WIDTH as u8;
-
-            let index = display::get_index_from_coords(coord_x as usize, y as usize);
-            let prev_value = self.screen[index];
-
-            let bit = byte >> 7;
-            self.screen[index] ^= bit;
-
-            if prev_value == 1 && self.screen[index] == 0 {
-                erased = true;
-            }
-            if self.screen[index] == 1 {
-                let coord_x = coord_x as u32 * SCALE_FACTOR;
+        for (y, row) in pixels.iter().enumerate() {
+            for (x, &col) in row.iter().enumerate()  {
+                let coord_x = x as u32 * SCALE_FACTOR;
                 let coord_y = y as u32 * SCALE_FACTOR;
 
-                //println!("drawing at ({}, {})", coord_x, coord_y);
-                self.canvas.fill_rect(Rect::new(coord_x as i32, coord_y as i32, SCALE_FACTOR, SCALE_FACTOR));
-                //std::thread::sleep(Duration::from_millis(200));
+                if col == 0 {
+                    self.canvas.set_draw_color(Color::RGB(0, 0, 0));
+                }
+                else if col == 1 {
+                    self.canvas.set_draw_color(Color::RGB(255, 255, 255));
+                }
+
+                self.canvas.fill_rect(Rect::new(coord_x as i32, coord_y as i32, SCALE_FACTOR, SCALE_FACTOR))?;
             }
-
-            byte <<= 1;
         }
-
-        Ok(erased)
+        Ok(())
     }
 }
 
 impl fmt::Debug for SdlDisplay {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SdlDisplay")
-            .field("screen", &self.screen)
+            .field("display_rate", &self.display_rate)
+            .field("prev_time", &self.prev_time)
             .finish()
     }
 }

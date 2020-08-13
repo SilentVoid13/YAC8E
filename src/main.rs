@@ -1,10 +1,10 @@
 mod chip8;
 mod cpu;
 mod ram;
-
+mod handler;
+mod screen;
 mod utils;
 
-mod handler;
 
 use crate::chip8::{Chip8, Chip8Config};
 

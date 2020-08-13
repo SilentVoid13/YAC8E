@@ -75,7 +75,7 @@ impl KeypadTrait for MiniFbKeypad {
         self.window.borrow().get_keys_released().map(|keys| {
             for t in keys {
                 let k = MiniFbKeypad::convert_keycode(t);
-                if k != 0 {
+                if k != 0xFF {
                     keys_state[k as usize] = false;
                 }
             }
