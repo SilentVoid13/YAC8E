@@ -5,8 +5,8 @@ use std::error::Error;
 use rand::Rng;
 use std::time::Instant;
 use crate::ram::Ram;
-use crate::handler::Handler;
 use crate::screen::Screen;
+use crate::keypad::Keypad;
 
 pub const PROGRAM_START: u16 = 0x200;
 
@@ -46,7 +46,7 @@ impl Cpu {
     }
 
     /// Runs a single instruction at `pc` address
-    pub fn run_instruction(&mut self, handler: &mut Handler, ram: &mut Ram, screen: &mut Screen, debug: bool) -> Result<(), Box<dyn Error>> {
+    pub fn run_instruction(&mut self, ram: &mut Ram, screen: &mut Screen, keypad: &Keypad, debug: bool) -> Result<(), Box<dyn Error>> {
         // Big-endian
         let high = ram.read_byte(self.pc as usize)? as u16;
         let low = ram.read_byte((self.pc + 1) as usize)? as u16;
@@ -238,12 +238,12 @@ impl Cpu {
                     0x9E => {
                         // if (key() == Vx)
                         let key = self.read_reg_vx(x);
-                        self.skip_if(*handler.keypad.is_key_pressed(key)?);
+                        self.skip_if(*keypad.is_key_pressed(key)?);
                     },
                     0xA1 => {
                         // 	if (key() != Vx)
                         let key = self.read_reg_vx(x);
-                        self.skip_if(!(*handler.keypad.is_key_pressed(key)?));
+                        self.skip_if(!(*keypad.is_key_pressed(key)?));
                     },
                     _ => {
                         return Err(format!("Unrecognized opcode: {:#X}", instruction).into());
@@ -259,7 +259,7 @@ impl Cpu {
                     },
                     0x0A => {
                         // Vx = get_key()
-                        if let Some(key) = handler.keypad.first_pressed_key() {
+                        if let Some(key) = keypad.first_pressed_key() {
                             self.write_reg_vx(x, key);
                             self.pc += 2;
                         }
@@ -401,7 +401,9 @@ impl Cpu {
     }
 
     /// Updates the timers (decrease by one)
-    pub fn update_timers(&mut self, debug: bool) {
+    ///
+    /// Returns whether the sound timer is active or not
+    pub fn update_timers(&mut self, debug: bool) -> bool {
         if debug {
             self.debug_count += 1;
             // update_timers has been called 60 times
@@ -424,5 +426,7 @@ impl Cpu {
         if self.sound_timer > 0 {
             self.sound_timer -= 1;
         }
+
+        self.sound_timer > 0
     }
 }

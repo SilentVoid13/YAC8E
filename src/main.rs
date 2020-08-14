@@ -3,17 +3,18 @@ mod cpu;
 mod ram;
 mod handler;
 mod screen;
+mod keypad;
 mod utils;
 
 
 use crate::chip8::{Chip8, Chip8Config};
+use crate::handler::HandlerType;
 
 use std::error::Error;
 
 use clap::{App, Arg};
 use std::path::Path;
 use std::process;
-use crate::handler::HandlerType;
 
 fn main() -> Result<(), Box<dyn Error>>{
     let version = "0.1";
@@ -42,7 +43,7 @@ fn main() -> Result<(), Box<dyn Error>>{
                     .short("l")
                     .long("library")
                     .value_name("LIBRARY")
-                    .help("Sets the handling library to use (default: minifb)")
+                    .help("Sets the handling library to use (default: sdl)")
             )
             .arg(
                 Arg::with_name("hertz")
@@ -97,7 +98,7 @@ fn main() -> Result<(), Box<dyn Error>>{
                 }
             }
         },
-        None => HandlerType::MINIFB,
+        None => HandlerType::SDL,
     };
 
     let hertz: f64 = match matches.value_of("hertz") {

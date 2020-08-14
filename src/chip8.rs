@@ -1,6 +1,7 @@
 use crate::cpu::{Cpu, PROGRAM_START};
 use crate::ram::Ram;
 use crate::screen::Screen;
+use crate::keypad::Keypad;
 use crate::handler::{Handler, HandlerType};
 use crate::utils::log_debug;
 
@@ -19,8 +20,10 @@ pub struct Chip8 {
     cpu: Cpu,
     /// RAM of the VM
     ram: Ram,
-    /// Vector containing all of the pixels of the screen
+    /// Screen of the VM
     screen: Screen,
+    /// Keypad of the VM
+    keypad: Keypad,
 }
 
 #[derive(Clone, Debug)]
@@ -43,6 +46,7 @@ impl Chip8 {
             cpu: Cpu::new(),
             ram: Ram::new(),
             screen: Screen::new(),
+            keypad: Keypad::new(),
         })
     }
 
@@ -73,12 +77,19 @@ impl Chip8 {
             accumulator += delta;
 
             while accumulator >= timer_frequency {
-                chip8.cpu.update_timers(chip8.config.debug);
+                let active_sound = chip8.cpu.update_timers(chip8.config.debug);
                 accumulator -= timer_frequency;
+
+                if active_sound {
+                    chip8.handler.sound.play_beep();
+                }
+                else {
+                    chip8.handler.sound.stop_beep();
+                }
             }
 
             // We update the keys state (released / pressed), returns false if we receive an exit signal
-            if !chip8.handler.keypad.update_keys_state() {
+            if !chip8.handler.keyboard.update_keys_state(&mut chip8.keypad.keys_state) {
                 break;
             }
 
@@ -102,7 +113,7 @@ impl Chip8 {
 
     /// Executes the instruction pointed by the PC
     pub fn run_instruction(&mut self) -> Result<(), Box<dyn Error>> {
-        self.cpu.run_instruction(&mut self.handler, &mut self.ram, &mut self.screen, self.config.debug)?;
+        self.cpu.run_instruction(&mut self.ram, &mut self.screen, &self.keypad, self.config.debug)?;
 
         if self.config.debug {
             log_debug(

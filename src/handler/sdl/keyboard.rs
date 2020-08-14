@@ -1,5 +1,4 @@
-use crate::handler::{KEYBOARD_SIZE, keypad};
-use crate::handler::keypad::KeypadTrait;
+use crate::handler::keyboard_trait::KeyboardTrait;
 
 use std::error::Error;
 
@@ -9,16 +8,14 @@ use sdl2::{Sdl, EventPump};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 
-pub struct SdlKeypad {
+pub struct SdlKeyboard {
     pub event_pump: EventPump,
-    pub keys_state: [bool; KEYBOARD_SIZE],
 }
 
-impl SdlKeypad {
+impl SdlKeyboard {
     pub fn new(sdl: &Sdl) -> Result<Self, Box<dyn Error>> {
-        Ok(SdlKeypad {
+        Ok(SdlKeyboard {
             event_pump: sdl.event_pump()?,
-            keys_state: [false; KEYBOARD_SIZE],
         })
     }
 
@@ -50,14 +47,14 @@ impl SdlKeypad {
     }
 }
 
-impl KeypadTrait for SdlKeypad {
-    fn update_keys_state(&mut self) -> bool {
+impl KeyboardTrait for SdlKeyboard {
+    fn update_keys_state(&mut self, keys_state: &mut [bool]) -> bool {
         let events: Vec<Event> = self.event_pump.poll_iter().collect();
-        println!("events: {:?}", events);
+
         for event in events {
             match event {
                 Event::Quit {..} => {
-                    return true;
+                    return false;
                 },
                 Event::KeyDown { keycode, .. } => {
                     match keycode {
@@ -67,7 +64,7 @@ impl KeypadTrait for SdlKeypad {
                             }
                             let k = Self::convert_keycode(k);
                             if k != 0xFF {
-                                self.keys_state[k as usize] = true;
+                                keys_state[k as usize] = true;
                             }
                         }
                         _ => {},
@@ -78,7 +75,7 @@ impl KeypadTrait for SdlKeypad {
                         Some(k) => {
                             let k = Self::convert_keycode(k);
                             if k != 0xFF {
-                                self.keys_state[k as usize] = false;
+                                keys_state[k as usize] = false;
                             }
                         }
                         _ => {},
@@ -90,20 +87,11 @@ impl KeypadTrait for SdlKeypad {
 
         true
     }
-
-    fn is_key_pressed(&self, key_code: u8) -> Result<&bool, Box<dyn Error>> {
-        keypad::is_key_pressed(&self.keys_state, key_code)
-    }
-
-    fn first_pressed_key(&self) -> Option<u8> {
-        keypad::first_pressed_key(&self.keys_state)
-    }
 }
 
-impl fmt::Debug for SdlKeypad {
+impl fmt::Debug for SdlKeyboard {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SdlKeypad")
-            .field("keys_state", &self.keys_state)
+        f.debug_struct("SdlKeyboard")
             .finish()
     }
 }

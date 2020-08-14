@@ -1,5 +1,7 @@
-mod keypad;
+mod keyboard;
 mod display;
+mod sound;
 
 pub use display::SdlDisplay;
-pub use keypad::SdlKeypad;
+pub use keyboard::SdlKeyboard;
+pub use sound::SdlSound;

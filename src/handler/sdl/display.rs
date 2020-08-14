@@ -1,4 +1,4 @@
-use crate::handler::display::DisplayTrait;
+use crate::handler::display_trait::DisplayTrait;
 
 use std::error::Error;
 use std::time::{Instant, Duration};

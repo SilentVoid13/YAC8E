@@ -1,7 +1,5 @@
-use crate::handler::{KEYBOARD_SIZE, keypad};
-use crate::handler::keypad::KeypadTrait;
+use crate::handler::keyboard_trait::KeyboardTrait;
 
-use std::error::Error;
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -9,17 +7,15 @@ use minifb::{Window, Key, KeyRepeat};
 
 #[derive(Debug)]
 /// The keyboard component, handling the keystrokes
-pub struct MiniFbKeypad {
+pub struct MiniFbKeyboard {
     pub window: Rc<RefCell<Window>>,
-    pub keys_state: [bool; KEYBOARD_SIZE],
 }
 
-impl MiniFbKeypad {
+impl MiniFbKeyboard {
     /// Creates a new `Keypad` object
     pub fn new(window: Rc<RefCell<Window>>) -> Self {
-        MiniFbKeypad {
+        MiniFbKeyboard {
             window,
-            keys_state: [false; KEYBOARD_SIZE],
         }
     }
 
@@ -51,26 +47,15 @@ impl MiniFbKeypad {
     }
 }
 
-impl KeypadTrait for MiniFbKeypad {
-    /// Returns `true` if `key_code` corresponds to `key_pressed`, `false` otherwise
-    fn is_key_pressed(&self, key_code: u8) -> Result<&bool, Box<dyn Error>> {
-        keypad::is_key_pressed(&self.keys_state, key_code)
-    }
-
-    fn first_pressed_key(&self) -> Option<u8> {
-        keypad::first_pressed_key(&self.keys_state)
-    }
-
-    fn update_keys_state(&mut self) -> bool {
+impl KeyboardTrait for MiniFbKeyboard {
+    fn update_keys_state(&mut self, keys_state: &mut [bool]) -> bool {
         if !self.window.borrow().is_open() || self.window.borrow().is_key_down(Key::Escape) {
             return false;
         }
 
-        // Otherwise the closure grabs the whole self variable == double ownership on window
-        let keys_state = &mut self.keys_state;
         self.window.borrow().get_keys_pressed(KeyRepeat::No).map(|keys| {
             for t in keys {
-                let k = MiniFbKeypad::convert_keycode(t);
+                let k = MiniFbKeyboard::convert_keycode(t);
                 if k != 0xFF {
                     keys_state[k as usize] = true;
                 }
@@ -78,7 +63,7 @@ impl KeypadTrait for MiniFbKeypad {
         });
         self.window.borrow().get_keys_released().map(|keys| {
             for t in keys {
-                let k = MiniFbKeypad::convert_keycode(t);
+                let k = MiniFbKeyboard::convert_keycode(t);
                 if k != 0xFF {
                     keys_state[k as usize] = false;
                 }
