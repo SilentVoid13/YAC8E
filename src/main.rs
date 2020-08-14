@@ -6,15 +6,14 @@ mod screen;
 mod keypad;
 mod utils;
 
-
 use crate::chip8::{Chip8, Chip8Config};
 use crate::handler::HandlerType;
 
 use std::error::Error;
-
-use clap::{App, Arg};
 use std::path::Path;
 use std::process;
+
+use clap::{App, Arg};
 
 fn main() -> Result<(), Box<dyn Error>>{
     let version = "0.1";
@@ -36,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>>{
                 Arg::with_name("debug")
                     .short("d")
                     .long("debug")
-                    .help("Sets debugging output (default: false)")
+                    .help("Sets debugging output")
             )
             .arg(
                 Arg::with_name("library")
@@ -44,6 +43,7 @@ fn main() -> Result<(), Box<dyn Error>>{
                     .long("library")
                     .possible_value("sdl")
                     .possible_value("minifb")
+                    .default_value("sdl")
                     .value_name("LIBRARY")
                     .takes_value(true)
                     .help("Sets the handling library to use (default: sdl) (minifb doesn't support sounds)")
@@ -52,20 +52,23 @@ fn main() -> Result<(), Box<dyn Error>>{
                 Arg::with_name("hertz")
                     .short("H")
                     .long("hertz")
+                    .default_value("500")
                     .value_name("HERTZ")
-                    .help("Sets the Hertz value for the CPU clock cycle per second speed (default: 500 Hz)")
+                    .help("Sets the Hertz value for the CPU clock cycle per second speed")
             )
             .arg(
                 Arg::with_name("width")
                     .long("width")
+                    .default_value("640")
                     .value_name("WIDTH")
-                    .help("Sets the window width (default: 640)")
+                    .help("Sets the window width")
             )
             .arg(
                 Arg::with_name("height")
                     .long("height")
+                    .default_value("320")
                     .value_name("HEIGHT")
-                    .help("Sets the window height (default: 320)")
+                    .help("Sets the window height")
             )
             .get_matches();
 
@@ -99,9 +102,15 @@ fn main() -> Result<(), Box<dyn Error>>{
                 }
             }
         },
-        None => HandlerType::SDL,
+        None => {
+            eprintln!("[-] Argument parsing error");
+            process::exit(1);
+        }
     };
 
+    // 500 Hz is considered a good value for CHIP-8 emulators.
+    // This mean roughly that 1 clock cycle ~= 2ms
+    // (This may vary depending on the instruction, i.e: drawing a sprite costs more than a simple XOR operation)
     let hertz: f64 = match matches.value_of("hertz") {
         Some(t) => {
             match t.parse().unwrap_or_else(|_| {
@@ -115,10 +124,10 @@ fn main() -> Result<(), Box<dyn Error>>{
                 }
             }
         },
-        // 500 Hz is considered a good value for CHIP-8 emulators.
-        // This mean roughly that 1 clock cycle ~= 2ms
-        // (This may vary depending on the instruction, e.g: drawing a sprite costs more than a simple XOR operation)
-        None => 500.0,
+        None => {
+            eprintln!("[-] Argument parsing error");
+            process::exit(1);
+        }
     };
 
     let width: usize = match matches.value_of("width") {
@@ -134,7 +143,10 @@ fn main() -> Result<(), Box<dyn Error>>{
                 }
             }
         },
-        None => 640,
+        None => {
+            eprintln!("[-] Argument parsing error");
+            process::exit(1);
+        }
     };
 
     let height: usize = match matches.value_of("height") {
@@ -150,7 +162,10 @@ fn main() -> Result<(), Box<dyn Error>>{
                 }
             }
         },
-        None => 320,
+        None => {
+            eprintln!("[-] Argument parsing error");
+            process::exit(1);
+        }
     };
 
     let chip8_config = Chip8Config {

@@ -1,17 +1,18 @@
-use crate::utils::{log_debug, log_warning};
-
-use std::error::Error;
-
-use rand::Rng;
-use std::time::Instant;
 use crate::ram::Ram;
 use crate::screen::Screen;
 use crate::keypad::Keypad;
+use crate::utils::{log_debug, log_warning, register_error, stack_pop_error};
 
+use std::error::Error;
+use std::time::Instant;
+
+use rand::Rng;
+
+/// Address pointing to the start of the program (executable instructions) in a CHIP-8 ROM
 pub const PROGRAM_START: u16 = 0x200;
 
 #[derive(Debug)]
-/// The CPU component
+/// Struct emulating the CPU
 pub struct Cpu {
     /// Vector containing the 16 8-bit registers, referred as V0 to VF
     vx: Vec<u8>,
@@ -19,7 +20,7 @@ pub struct Cpu {
     pc: u16,
     /// The 16-bit register used to store memory addresses,
     i: u16,
-    /// Vector emulation the stack containing 16 16-bit values at maximum
+    /// Vector emulating the stack containing 16 16-bit values at maximum
     /// Only used for return addresses in CHIP-8
     stack: Vec<u16>,
     /// Delay timer
@@ -47,7 +48,7 @@ impl Cpu {
 
     /// Runs a single instruction at `pc` address
     pub fn run_instruction(&mut self, ram: &mut Ram, screen: &mut Screen, keypad: &Keypad, debug: bool) -> Result<(), Box<dyn Error>> {
-        // Big-endian
+        // Big-endian address
         let high = ram.read_byte(self.pc as usize)? as u16;
         let low = ram.read_byte((self.pc + 1) as usize)? as u16;
         let instruction: u16 = (high << 8) | low;
@@ -76,7 +77,7 @@ impl Cpu {
 
         match (instruction & 0xF000) >> 12 {
             0x0 => {
-                // We don't implement opcode 0x0NNN, only used on older machines and deprecated
+                // I choose not to implement opcode 0x0NNN, only used on older machines and deprecated
                 match nn {
                     0xE0 => {
                         // disp_clear()
@@ -85,7 +86,9 @@ impl Cpu {
                     },
                     0xEE => {
                         // return;
-                        self.pc = self.stack.pop().ok_or("Impossible instruction: 0x00EE, no return address on stack")?;
+                        self.pc = self.stack.pop().ok_or(
+                            stack_pop_error()
+                        )?;
                     },
                     _ => {
                         return Err(format!("Unrecognized opcode: {:#X}", instruction).into());
@@ -271,14 +274,7 @@ impl Cpu {
                     },
                     0x18 => {
                         // sound_timer(Vx)
-                        // TODO
-
                         self.sound_timer = self.read_reg_vx(x);
-
-                        if debug {
-                            log_warning("Sound can't be implemented with minifb, instruction 0xFX18 skipped");
-                        }
-
                         self.pc += 2;
                     },
                     0x1E => {
@@ -297,9 +293,9 @@ impl Cpu {
                         // *(I+1) = BCD(2);
                         // *(I+2) = BCD(1);
                         let vx = self.read_reg_vx(x);
-                        ram.write_byte(self.i as usize, vx / 100);
-                        ram.write_byte((self.i + 1) as usize, (vx % 100) / 10);
-                        ram.write_byte((self.i + 2) as usize, vx % 10);
+                        ram.write_byte(self.i as usize, vx / 100)?;
+                        ram.write_byte((self.i + 1) as usize, (vx % 100) / 10)?;
+                        ram.write_byte((self.i + 2) as usize, vx % 10)?;
                         self.pc += 2;
                     },
                     0x55 => {
@@ -310,7 +306,10 @@ impl Cpu {
 
                         let index = (x+1) as usize;
                         ram.write_bytes(
-                            self.i as usize, self.vx.get(0..index).ok_or("OOB index")?
+                            self.i as usize,
+                            self.vx.get(0..index).ok_or(
+                                register_error(index)
+                            )?
                         )?;
                         self.i += x as u16 + 1;
 
@@ -326,7 +325,9 @@ impl Cpu {
 
                         let index = (x+1) as usize;
                         self.vx
-                            .get_mut(0..index).ok_or("OOB index")?
+                            .get_mut(0..index).ok_or(
+                                register_error(index)
+                            )?
                             .copy_from_slice(
                                 ram.read_bytes(self.i as usize, index)?
                             );
@@ -352,11 +353,12 @@ impl Cpu {
         self.vx[index as usize] = value;
     }
 
-    /// Reads one byte from register at index `index`
+    /// Reads value from register at index `index`
     pub fn read_reg_vx(&self, index: u8) -> u8 {
         self.vx[index as usize]
     }
 
+    /// Skips the next instruction if the condition `cond` is true
     pub fn skip_if(&mut self, cond: bool) {
         if cond {
             self.pc += 4;
@@ -400,13 +402,12 @@ impl Cpu {
         Ok(())
     }
 
-    /// Updates the timers (decrease by one)
+    /// Updates the timers (delay_timer / sound_timer)
     ///
     /// Returns whether the sound timer is active or not
     pub fn update_timers(&mut self, debug: bool) -> bool {
         if debug {
             self.debug_count += 1;
-            // update_timers has been called 60 times
             if self.debug_count == 60 {
                 // This should be 1 second
                 let time_taken = Instant::now() - self.debug_time;

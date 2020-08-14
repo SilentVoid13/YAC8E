@@ -1,7 +1,9 @@
+use crate::utils::{oob_write_error, oob_read_error, integer_overflow_error};
+
 use std::error::Error;
 
 #[derive(Debug)]
-/// CHIP-8 RAM emulation struct
+/// Struct emulating the CHIP-8 RAM
 pub struct Ram {
     /// Memory vector
     memory: Vec<u8>,
@@ -44,9 +46,11 @@ impl Ram {
     }
 
     /// Writes a single byte into memory at `address` with value `value`
-    pub fn write_byte(&mut self, address: usize, value: u8) {
-        // TODO: Secure this
-        self.memory[address] = value;
+    pub fn write_byte(&mut self, address: usize, value: u8) -> Result<(), Box<dyn Error>> {
+        *self.memory.get_mut(address).ok_or(
+            oob_write_error(address, &[value])
+        )? = value;
+        Ok(())
     }
 
     #[allow(dead_code)]
@@ -54,9 +58,13 @@ impl Ram {
     pub fn write_bytes(&mut self, address: usize, buf: &[u8]) -> Result<(), Box<dyn Error>> {
         self.memory
             .get_mut(
-            address..address.checked_add(buf.len()).ok_or("Integer overflow")?
+                address..address.checked_add(buf.len()).ok_or(
+                    integer_overflow_error(address, buf.len())
+                )?
             )
-            .ok_or("OOB index")?
+            .ok_or(
+                oob_write_error(address, buf)
+            )?
             .copy_from_slice(buf);
 
         Ok(())
@@ -64,17 +72,18 @@ impl Ram {
 
     /// Reads a single byte at `address`
     pub fn read_byte(&self, address: usize) -> Result<u8, Box<dyn Error>>{
-        //let v = self.memory.get(address).ok_or("OOB index")?;
-        //Ok(*v)
-
-        // TODO: Secure this
-        Ok(self.memory[address])
+        let v = self.memory.get(address).ok_or(
+            oob_read_error(address, 1)
+        )?;
+        Ok(*v)
     }
 
     #[allow(dead_code)]
     /// Reads `size` bytes at `address`
     pub fn read_bytes(&self, address: usize, size: usize) -> Result<&[u8], Box<dyn Error>>{
-        let v = self.memory.get(address..address+size).ok_or("OOB index")?;
+        let v = self.memory.get(address..address+size).ok_or(
+            oob_read_error(address, size)
+        )?;
         Ok(v)
     }
 }

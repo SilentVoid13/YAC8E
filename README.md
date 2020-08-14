@@ -2,7 +2,7 @@
 
 [YAC8E](https://github.com/SilentVoid13/YAC8E) is Yet Another CHIP-8 Emulator written in Rust. 
 
-This emulator implements the original CHIP-8 specifications and its 35 instructions (no SUPER-CHIP).
+This emulator implements the original CHIP-8 specification and its 35 instructions (no SUPER-CHIP).
 
 I tried to make the code as clean as possible, and added some documentation. This project aims to be a good reference for people wanting to implement their own CHIP-8 emulator in Rust. 
 
@@ -17,23 +17,23 @@ Because i felt like so, i decided to use 2 different libraries in order to handl
 
 You can pick the library of your choice when starting the emulator.
 
-You can also set a custom `Hertz` value for the CPU clock cycle per second speed. The best `Hertz` value may vary with games and may require some tuning. `500` is considered a good value in average.
+You can also set a custom `Hertz` value for the CPU clock cycle per second speed. The best `Hertz` value may vary with games and may require some tuning. `500` Hz is considered a good value in average.
 
 ```bash
 USAGE:
     yac8e [FLAGS] [OPTIONS] <ROM_FILE>
 
 FLAGS:
-    -d, --debug      Sets debugging output (default: false)
+    -d, --debug      Sets debugging output
     -h, --help       Prints help information
     -V, --version    Prints version information
 
 OPTIONS:
-        --height <HEIGHT>      Sets the window height (default: 320)
-    -H, --hertz <HERTZ>        Sets the Hertz value for the CPU clock cycle per second speed (default: 500 Hz)
-    -l, --library <LIBRARY>    Sets the handling library to use (default: sdl) (minifb doesn't support sounds) [possible
-                               values: sdl, minifb]
-        --width <WIDTH>        Sets the window width (default: 640)
+        --height <HEIGHT>      Sets the window height [default: 320]
+    -H, --hertz <HERTZ>        Sets the Hertz value for the CPU clock cycle per second speed [default: 500]
+    -l, --library <LIBRARY>    Sets the handling library to use (default: sdl) (minifb doesn't support sounds) [default:
+                               sdl]  [possible values: sdl, minifb]
+        --width <WIDTH>        Sets the window width [default: 640]
 
 ARGS:
     <ROM_FILE>    The ROM file to run

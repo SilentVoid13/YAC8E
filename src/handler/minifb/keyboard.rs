@@ -8,6 +8,7 @@ use minifb::{Window, Key, KeyRepeat};
 #[derive(Debug)]
 /// The keyboard component, handling the keystrokes
 pub struct MiniFbKeyboard {
+    /// Window handling all the events (display + keyboard)
     pub window: Rc<RefCell<Window>>,
 }
 

@@ -8,11 +8,14 @@ use sdl2::{Sdl, EventPump};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 
+/// The keyboard component, handling the keystrokes
 pub struct SdlKeyboard {
+    /// Event pump handling all the keyboard events
     pub event_pump: EventPump,
 }
 
 impl SdlKeyboard {
+    /// Creates a new `SdlKeyboard` object
     pub fn new(sdl: &Sdl) -> Result<Self, Box<dyn Error>> {
         Ok(SdlKeyboard {
             event_pump: sdl.event_pump()?,
@@ -89,6 +92,7 @@ impl KeyboardTrait for SdlKeyboard {
     }
 }
 
+/// Mock Debug implementation for debugging purpose
 impl fmt::Debug for SdlKeyboard {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SdlKeyboard")

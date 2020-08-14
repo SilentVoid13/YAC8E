@@ -1,9 +1,9 @@
 use crate::handler::sound_trait::SoundTrait;
 
+use std::error::Error;
+
 use sdl2::audio::{AudioCallback, AudioSpecDesired, AudioDevice};
 use sdl2::{Sdl};
-
-use std::error::Error;
 
 use core::fmt;
 
@@ -14,11 +14,14 @@ struct SquareWave {
     volume: f32
 }
 
+/// Sound component for SDL
 pub struct SdlSound {
+    /// Audio device, on which the sound will be played
     audio_device: AudioDevice<SquareWave>,
 }
 
 impl SdlSound {
+    /// Creates a new `SdlSound` object
     pub fn new(sdl: &Sdl) -> Result<Self, Box<dyn Error>> {
         let audio_subsystem = sdl.audio()?;
 
@@ -69,6 +72,7 @@ impl AudioCallback for SquareWave {
     }
 }
 
+/// Mock Debug implementation for debugging purpose
 impl fmt::Debug for SdlSound {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SdlSound")

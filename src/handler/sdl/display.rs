@@ -14,18 +14,23 @@ use sdl2::pixels::Color;
 
 const SCALE_FACTOR: u32 = 10;
 
+/// Display component for SDL
 pub struct SdlDisplay {
+    /// Display rate
     display_rate: Duration,
+    /// Last time the display was updated
     prev_time: Instant,
+    /// Canvas handling all the display events
     canvas: Canvas<Window>,
 }
 
 impl SdlDisplay {
-    pub fn new(sdl: &Sdl, display_frequency: Duration) -> Result<Self, Box<dyn Error>> {
+    /// Creates a new `SdlDisplay` object
+    pub fn new(sdl: &Sdl, display_frequency: Duration, window_width: usize, window_height: usize) -> Result<Self, Box<dyn Error>> {
         let video_subsystem = sdl.video()?;
 
         let window = video_subsystem
-            .window("Chip 8 Emulator", 640, 320)
+            .window("Yet Another CHIP-8 Emulator", window_width as u32, window_height as u32)
             .position_centered()
             .opengl()
             .build()?;
@@ -44,6 +49,7 @@ impl SdlDisplay {
         })
     }
 
+    /// Update the refresh rate, sleeping for the remaining time if necessary
     fn update_rate(&mut self) {
         let delta = self.prev_time.elapsed();
         if delta < self.display_rate {
@@ -88,6 +94,7 @@ impl DisplayTrait for SdlDisplay {
     }
 }
 
+/// Mock Debug implementation for debugging purpose
 impl fmt::Debug for SdlDisplay {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SdlDisplay")

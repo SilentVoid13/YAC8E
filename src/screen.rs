@@ -1,14 +1,19 @@
 use std::error::Error;
 
+/// Width of the screen
 pub const WIDTH: usize = 64;
+/// Height of the screen
 pub const HEIGHT: usize = 32;
 
 #[derive(Debug)]
+/// Struct containing all the pixels of the screen
 pub struct Screen {
+    /// Vector containing vectors. Each of these vectors represent a row of the screen.
     pub pixels: Vec<Vec<u8>>,
 }
 
 impl Screen {
+    /// Creates a new `Screen` object
     pub fn new() -> Self {
         Screen {
             pixels: vec![vec![0; WIDTH]; HEIGHT],
@@ -16,7 +21,8 @@ impl Screen {
     }
 
     /// Draws the sprite `byte` to the screen at coordinates (`x`,`y`)
-    /// For a sprite data byte, a bit set to one corresponds to a white pixel. Contrastingly, a bit set to zero corresponds to a transparent pixel
+    /// For a sprite data byte, a bit set to one corresponds to a colored pixel (=white).
+    /// Contrastingly, a bit set to zero corresponds to a transparent pixel (=black)
     ///
     /// Returns whether the drawing erased an existing byte so the CPU can set VF accordingly (1 if erased, 0 if not)
     pub fn draw_byte(&mut self, x: u8, y: u8, mut byte: u8) -> Result<bool, Box<dyn Error>> {
@@ -41,7 +47,6 @@ impl Screen {
 
         Ok(erased)
     }
-
 
     /// Clears the screen, resetting all pixels to 0
     pub fn clear(&mut self) {

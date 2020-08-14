@@ -1,13 +1,17 @@
 use std::error::Error;
 
+/// The max size of the keyboard (16 for CHIP-8)
 pub const KEYBOARD_SIZE: usize = 16;
 
 #[derive(Debug)]
+/// Struct containing the active key strokes
 pub struct Keypad {
+    /// Array of the keys state. `true` if pressed, `false` if released.
     pub keys_state: [bool; KEYBOARD_SIZE],
 }
 
 impl Keypad {
+    /// Creates a new `Keypad` object
     pub fn new() -> Self {
         Keypad {
             keys_state: [false; KEYBOARD_SIZE],
