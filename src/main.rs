@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>>{
                     .default_value("sdl")
                     .value_name("LIBRARY")
                     .takes_value(true)
-                    .help("Sets the handling library to use (default: sdl) (minifb doesn't support sounds)")
+                    .help("Sets the handling library to use (minifb doesn't support sounds)")
             )
             .arg(
                 Arg::with_name("hertz")

@@ -31,8 +31,8 @@ FLAGS:
 OPTIONS:
         --height <HEIGHT>      Sets the window height [default: 320]
     -H, --hertz <HERTZ>        Sets the Hertz value for the CPU clock cycle per second speed [default: 500]
-    -l, --library <LIBRARY>    Sets the handling library to use (default: sdl) (minifb doesn't support sounds) [default:
-                               sdl]  [possible values: sdl, minifb]
+    -l, --library <LIBRARY>    Sets the handling library to use (minifb doesn't support sounds) [default: sdl]
+                               [possible values: sdl, minifb]
         --width <WIDTH>        Sets the window width [default: 640]
 
 ARGS:
