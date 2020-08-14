@@ -66,16 +66,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
-name = "chip8_emu"
-version = "0.1.0"
-dependencies = [
- "clap",
- "minifb",
- "rand 0.7.3",
- "sdl2 0.34.2",
-]
-
-[[package]]
 name = "clap"
 version = "2.33.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -674,3 +664,13 @@ name = "xml-rs"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b07db065a5cf61a7e4ba64f29e67db906fb1787316516c4e6e5ff0fea1efcd8a"
+
+[[package]]
+name = "yac8e"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "minifb",
+ "rand 0.7.3",
+ "sdl2 0.34.2",
+]

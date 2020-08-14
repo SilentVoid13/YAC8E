@@ -1,5 +1,5 @@
 [package]
-name = "chip8_emu"
+name = "yac8e"
 version = "0.1.0"
 authors = ["SilentVoid13 <silentvoid13@protonmail.com>"]
 edition = "2018"
