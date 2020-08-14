@@ -42,7 +42,10 @@ fn main() -> Result<(), Box<dyn Error>>{
                 Arg::with_name("library")
                     .short("l")
                     .long("library")
-                    .value_names(&["sdl", "minifb"])
+                    .possible_value("sdl")
+                    .possible_value("minifb")
+                    .value_name("LIBRARY")
+                    .takes_value(true)
                     .help("Sets the handling library to use (default: sdl) (minifb doesn't support sounds)")
             )
             .arg(

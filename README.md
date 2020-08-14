@@ -29,10 +29,11 @@ FLAGS:
     -V, --version    Prints version information
 
 OPTIONS:
-        --height <HEIGHT>           Sets the window height (default: 320)
-    -H, --hertz <HERTZ>             Sets the Hertz value for the CPU clock cycle per second speed (default: 500 Hz)
-    -l, --library <sdl> <minifb>    Sets the handling library to use (default: sdl) (minifb doesn't support sounds)
-        --width <WIDTH>             Sets the window width (default: 640)
+        --height <HEIGHT>      Sets the window height (default: 320)
+    -H, --hertz <HERTZ>        Sets the Hertz value for the CPU clock cycle per second speed (default: 500 Hz)
+    -l, --library <LIBRARY>    Sets the handling library to use (default: sdl) (minifb doesn't support sounds) [possible
+                               values: sdl, minifb]
+        --width <WIDTH>        Sets the window width (default: 640)
 
 ARGS:
     <ROM_FILE>    The ROM file to run
