@@ -24,7 +24,7 @@ USAGE:
     yac8e [FLAGS] [OPTIONS] <ROM_FILE>
 
 FLAGS:
-    -d, --debug      Sets debugging output
+    -d, --debug      Enables debugging output
     -h, --help       Prints help information
     -V, --version    Prints version information
 

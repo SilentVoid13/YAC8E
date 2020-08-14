@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>>{
                 Arg::with_name("debug")
                     .short("d")
                     .long("debug")
-                    .help("Sets debugging output")
+                    .help("Enables debugging output")
             )
             .arg(
                 Arg::with_name("library")
